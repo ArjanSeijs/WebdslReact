@@ -60,3 +60,10 @@ body {
 .nav-link {
     cursor: pointer;
 }
+.dropdown-item.deco-none:focus,
+.dropdown-item.deco-none:hover,
+.dropdown-item.deco-none {
+    background-color: inherit;
+    color: inherit;
+    text-decoration:none;
+}

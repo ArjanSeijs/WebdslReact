@@ -1,10 +1,10 @@
 import React from "react";
 import {Card, Container, Row} from "react-bootstrap";
 import {Link} from "react-router-dom";
+import {parsePeopleResults, PersonBase} from "./familyOverview";
 
 
-type Person = { family: string; uuid: string, name: string, birthday: Date, gender: string, image: string };
-type searchState = { people: Person[], trees: { uuid: string, name: string }[] };
+type searchState = { people: PersonBase[], trees: { uuid: string, name: string }[] };
 type searchProps = { query: string };
 
 export class Search extends React.Component<searchProps, searchState> {
@@ -25,12 +25,7 @@ export class Search extends React.Component<searchProps, searchState> {
         let response = await fetch(`/FamilyTree/sv_search/${encodeURI(this.props.query)}`);
         if (response.ok) {
             let results = await response.json();
-            let people = await Promise.all<Person>(results.people.map(async (p: any) => {
-                let image = await fetch('/FamilyTree/getImageFile/' + p.uuid)
-                p.birthday = new Date(p.birthday);
-                p.image = window.URL.createObjectURL(await image.blob())
-                return p as Person;
-            }));
+            let people = await parsePeopleResults(results);
             this.setState({people: people, trees: results.trees})
         } else {
             alert('Could not reach server')
@@ -38,7 +33,7 @@ export class Search extends React.Component<searchProps, searchState> {
     }
 
     componentDidUpdate(prevProps: Readonly<searchProps>, prevState: Readonly<searchState>, snapshot?: any) {
-        if (prevProps.query != this.props.query) {
+        if (prevProps.query !== this.props.query) {
             this.fetchSearch().catch((e) => {
                 alert('Could not reach server');
                 console.error(e)
@@ -70,7 +65,7 @@ export class Search extends React.Component<searchProps, searchState> {
     }
 }
 
-class PersonSearchCard extends React.Component<{ person: Person }> {
+class PersonSearchCard extends React.Component<{ person: PersonBase }> {
 
     render() {
         let p = this.props.person;
