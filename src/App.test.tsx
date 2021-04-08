@@ -1,9 +1,10 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import App from './App';
+import {AuthenticationState} from "./pages/authencation";
 
 test('renders learn react link', () => {
-  render(<App />);
+  render(<App auth={AuthenticationState.instance}/>);
   const linkElement = screen.getByText(/learn react/i);
   expect(linkElement).toBeInTheDocument();
 });

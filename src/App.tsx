@@ -1,26 +1,31 @@
-import React from 'react';
-import logo from './logo.svg';
-import './App.css';
+import 'bootstrap/dist/css/bootstrap.min.css';
 
-function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
-}
+import React from 'react';
+import './App.css';
+import {MyNavbar} from "./pages/navbar";
+import {BrowserRouter as Router, Route, Switch,} from "react-router-dom";
+import {Root} from "./pages/root";
+import {AuthenticationState} from "./pages/authencation";
+import {observer} from "mobx-react";
+import {PageNotFound} from "./pages/pageNotFound";
+import {Search} from "./pages/search";
+
+const App = observer(function (x: { auth: AuthenticationState }) {
+    return (
+        <Router>
+            <MyNavbar/>
+            <Switch>
+                <Route path="/search/:query" render={(props) => <Search query={props.match.params.query}/>}>
+                </Route>
+                <Route exact={true} path="/">
+                    <Root/>
+                </Route>
+                <Route path="*">
+                    <PageNotFound/>
+                </Route>
+            </Switch>
+        </Router>
+    );
+});
 
 export default App;

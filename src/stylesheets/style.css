@@ -1,0 +1,62 @@
+img.user-image {
+	max-width:100%;
+	max-height:100%;
+}
+img.user-image.small {
+    height: 35%;
+    object-fit: contain;
+    background-color: gray;
+}
+div.card-container {
+	padding: 1%;
+	background-color: rgba(200,200,200,100);
+}
+
+button.person-edit-btn {
+    border: none;
+    border-radius: 1.5rem;
+    color: #6c757d;
+    cursor: pointer;
+}
+
+a.clickable-card,
+a.clickable-card:hover {
+  color: inherit;
+}
+
+.navbar-dropdown-menu {
+	min-width: 250px !important;
+}
+
+body {
+	background-color: antiquewhite !important;
+}
+
+.hov-pointer:hover {
+    cursor: pointer;
+}
+
+#family_edit_menu {
+	overflow-y : auto;
+	max-height: 95vh;
+}
+
+.card.card-horizontal {
+  flex-direction: row;
+  align-items: center;
+}
+
+.card-title {
+  font-weight: bold;
+}
+
+.node--has-children {
+	cursor : pointer;
+}
+.body {
+    background-color: antiquewhite !important;
+}
+
+.nav-link {
+    cursor: pointer;
+}

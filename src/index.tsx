@@ -3,10 +3,13 @@ import ReactDOM from 'react-dom';
 import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
+import {AuthenticationState} from "./pages/authencation";
+
+AuthenticationState.instance.update().catch(console.error);
 
 ReactDOM.render(
   <React.StrictMode>
-    <App />
+    <App auth={AuthenticationState.instance}/>
   </React.StrictMode>,
   document.getElementById('root')
 );
