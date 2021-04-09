@@ -1,26 +1,17 @@
 import '../stylesheets/style.css'
 
 import React from "react";
-import {
-    Button,
-    Card,
-    Container,
-    DropdownButton, Form,
-    InputGroup,
-    ListGroup,
-    ListGroupItem,
-    Row
-} from "react-bootstrap";
-import {Link} from "react-router-dom";
+import {Button, Container, DropdownButton, Form, InputGroup, Row} from "react-bootstrap";
+import {getImage, typePersonBase, PersonCard, typePersonOverview} from "./personOverview";
 
 type familyOverviewFilter = {
     direction: 1 | -1;
     sort: string
-    sortFunc: (a: PersonOverview, b: PersonOverview) => number;
+    sortFunc: (a: typePersonOverview, b: typePersonOverview) => number;
     filters: string[]
     search: string;
 };
-type familyOverviewState = { people: PersonOverview[], name: string } & familyOverviewFilter;
+type familyOverviewState = { people: typePersonOverview[], name: string } & familyOverviewFilter;
 type familyOverviewType = { id: string };
 
 export class FamilyOverview extends React.Component<familyOverviewType, familyOverviewState> {
@@ -36,7 +27,7 @@ export class FamilyOverview extends React.Component<familyOverviewType, familyOv
         let response = await fetch(`/FamilyTree/user_people/${this.props.id}`);
         if (response.ok) {
             let result = await response.json();
-            let people = await parsePeopleResults<PersonOverview>(result);
+            let people = await parsePeopleResults<typePersonOverview>(result);
             this.setState({people: people, name: result.name})
         }
     }
@@ -98,7 +89,7 @@ export class FamilyOverview extends React.Component<familyOverviewType, familyOv
                     .filter((p) => this.filterFunc(p))
                     .filter((p) => this.searchFunc(p))
                     .sort((a, b) => this.state.sortFunc(a, b))
-                    .map(p => <div className="col-md-3 p-1" key={p.uuid}><PersonCard person={p}/></div>)
+                    .map(p => <div className="col-md-3 p-1" key={p.uuid}><PersonCard person={p} link={true}/></div>)
                 }
             </Row>
         </Container>
@@ -154,15 +145,15 @@ export class FamilyOverview extends React.Component<familyOverviewType, familyOv
         this.setState({search})
     }
 
-    private sortBirthplace(p1: PersonOverview, p2: PersonOverview) {
-        let a = (p1.birthplace || '').toLocaleLowerCase();
-        let b = (p2.birthplace || '').toLocaleLowerCase();
+    private sortBirthplace(p1: typePersonOverview, p2: typePersonOverview) {
+        let a = (p1.birthplace || '').toLowerCase()
+        let b = (p2.birthplace || '').toLowerCase()
         if (a === b) return this.sortName(p1, p2) * this.state.direction;
         else if (a < b) return -1 * this.state.direction;
         else return 1 * this.state.direction;
     }
 
-    private sortPassingDate(p1: PersonOverview, p2: PersonOverview) {
+    private sortPassingDate(p1: typePersonOverview, p2: typePersonOverview) {
         let date = new Date();
         let a = p1.passingDate || date;
         let b = p2.passingDate || date;
@@ -170,24 +161,24 @@ export class FamilyOverview extends React.Component<familyOverviewType, familyOv
         return diff !== 0 ? diff * this.state.direction : this.sortName(p1, p2) * this.state.direction;
     }
 
-    private sortBirthday(p1: PersonOverview, p2: PersonOverview) {
+    private sortBirthday(p1: typePersonOverview, p2: typePersonOverview) {
         let a = p1.birthday;
         let b = p2.birthday;
         let diff = a.getTime() - b.getTime();
         return diff !== 0 ? diff * this.state.direction : this.sortName(p1, p2) * this.state.direction;
     }
 
-    private sortGender(p1: PersonOverview, p2: PersonOverview) {
-        let a = p1.gender.toLocaleLowerCase();
-        let b = p2.gender.toLocaleLowerCase();
+    private sortGender(p1: typePersonOverview, p2: typePersonOverview) {
+        let a = p1.gender.toLowerCase();
+        let b = p2.gender.toLowerCase();
         if (a === b) return this.sortName(p1, p2) * this.state.direction;
         else if (a < b) return -1 * this.state.direction;
         else return 1 * this.state.direction;
     }
 
-    private sortName(p1: PersonOverview, p2: PersonOverview) {
-        let a = p1.name.toLocaleLowerCase();
-        let b = p2.name.toLocaleLowerCase();
+    private sortName(p1: typePersonOverview, p2: typePersonOverview) {
+        let a = p1.name.toLowerCase();
+        let b = p2.name.toLowerCase()
         if (a === b) return 0;
         else if (a < b) return -1 * this.state.direction;
         else return 1 * this.state.direction;
@@ -198,77 +189,31 @@ export class FamilyOverview extends React.Component<familyOverviewType, familyOv
         else this.setState({direction: 1})
     }
 
-    private filterFunc(p: PersonOverview): boolean {
+    private filterFunc(p: typePersonOverview): boolean {
         return this.state.filters.length === 0 || this.state.filters.indexOf(p.gender) !== -1;
     }
 
-    private searchFunc(p: PersonOverview): boolean {
-        return this.state.search.length === 0 || p.name.includes(this.state.search);
+    private searchFunc(p: typePersonOverview): boolean {
+        return this.state.search.length === 0 || p.name.toLowerCase().includes(this.state.search.toLowerCase());
     }
 }
 
-export type PersonBase = { family: string; uuid: string, name: string, birthday: Date, gender: string, image: string };
-
-type PersonRelation = { uuid: string, name: string };
-type PersonData = { passingDate?: Date, birthplace?: string, parents: PersonRelation[] }
-// type PersonOptionalData = { children: PersonRelation[], siblings: PersonRelation[], description?: string } & PersonData;
-
-type PersonOverview = PersonBase & PersonData
-
-function age(date: Date, birthday: Date) {
-    let age = date.getFullYear() - birthday.getFullYear();
-    if (date.getMonth() < birthday.getMonth()) {
-        age--;
-    } else if (date.getMonth() === birthday.getMonth() && date.getDate() < birthday.getDate()) {
-        age--;
-    }
-    return age;
+interface PeopleMap<T extends typePersonBase> {
+    [key: string]: T;
 }
 
-class PersonCard extends React.Component<{ person: PersonOverview }> {
-
-    render() {
-        let p = this.props.person;
-        return <Card className="h-100">
-            <Card.Img variant="top" className='user-image small' src={p.image ? p.image : "/FamilyTree/images/user-default.png"}/>
-            <Card.Body className="p-0">
-                <Card.Title className="p-3">{p.name}</Card.Title>
-                <div className="card-text">
-                    <ListGroup className="list-group-flush">
-                        <hr/>
-                        <PersonCardList faIcon="fas fa-venus-mars" value={p.gender}/>
-                        <PersonCardList faIcon="fas fa-birthday-cake" value={p.birthday.toDateString()}/>
-                        <PersonCardList faIcon="fas fa-cross" value={p.passingDate?.toDateString()} placeholder="Alive"/>
-                        <PersonCardList faIcon="fas fa-city" value={p.birthplace} placeholder="Birthplace"/>
-                        <PersonCardList faIcon="fas fa-calendar-alt" value={age(p.passingDate || new Date(), p.birthday) + " years"}/>
-                        <PersonCardList faIcon="fas fa-user" value={p.parents[0]?.name} placeholder="Parent"/>
-                        <PersonCardList faIcon="fas fa-user" value={p.parents[1]?.name} placeholder="Parent"/>
-                        <ListGroupItem/>
-                    </ListGroup>
-                </div>
-                <Link to={`/person/${p.uuid}`} className="stretched-link"/>
-            </Card.Body>
-
-        </Card>
-    }
-}
-
-class PersonCardList extends React.Component<{ faIcon: string, value: string | undefined, placeholder?: string }> {
-    render() {
-        return <ListGroupItem>
-            <div className="float-left"><i className={this.props.faIcon}/></div>
-            <div className="float-right">{this.props.value ? this.props.value :
-                <span className="text-muted">{this.props.placeholder}</span>}</div>
-        </ListGroupItem>
-    }
-}
-
-export async function parsePeopleResults<T extends PersonBase>(results: any): Promise<T[]> {
+export async function parsePeopleResults<T extends typePersonBase>(results: any): Promise<T[]> {
+    let people = results.people.reduce((map: PeopleMap<T>, obj: T) => {
+        map[obj.uuid] = obj;
+        return map
+    }, {});
     return await Promise.all<T>(results.people.map(async (p: any) => {
-        let image = await fetch(`/FamilyTree/getImageFile/${p.uuid}`)
         p.birthday = new Date(p.birthday);
         p.passingDate = p.passingDate ? new Date(p.passingDate) : null;
-        p.image = window.URL.createObjectURL(await image.blob())
+        p.image = await getImage(p.uuid)
+        p.parents = p.parents.map((id: string) => {
+            return {id: id, name: people[id]?.name}
+        });
         return p as T;
     }));
 }

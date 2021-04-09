@@ -1,0 +1,7 @@
+[x] person page
+[ ] person edit
+[ ] new person creation
+[ ] new tree creation
+[ ] edit tree name
+
+[ ] manage permissions

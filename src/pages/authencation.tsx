@@ -117,7 +117,7 @@ export class RegisterComponent extends AuthComponent {
 
     handleSubmit(e: React.FormEvent<HTMLFormElement>): void {
         e.preventDefault()
-        register(this.state.username, this.state.password).catch(console.error);
+        register(this.state.username, this.state.password).then((u) => AuthenticationState.instance.login(u)).catch(console.error);
     }
 
 }
@@ -142,7 +142,7 @@ export class LogoutComponent extends React.Component {
  * @param username
  * @param password
  */
-async function register(username: string, password: string): Promise<void> {
+async function register(username: string, password: string): Promise<string> {
     let response = await fetch('/FamilyTree/user_register', {
         method: 'POST',
         headers: {
@@ -153,6 +153,7 @@ async function register(username: string, password: string): Promise<void> {
     if (response.ok) {
         let json = await response.json();
         alert(json.message)
+        return username;
     } else {
         alert('Could not reach server');
         throw new Error(response.statusText)

@@ -1,10 +1,11 @@
 import React from "react";
 import {Card, Container, Row} from "react-bootstrap";
 import {Link} from "react-router-dom";
-import {parsePeopleResults, PersonBase} from "./familyOverview";
+import {parsePeopleResults} from "./familyOverview";
+import {typePersonBase} from "./personOverview";
 
 
-type searchState = { people: PersonBase[], trees: { uuid: string, name: string }[] };
+type searchState = { people: typePersonBase[], trees: { uuid: string, name: string }[] };
 type searchProps = { query: string };
 
 export class Search extends React.Component<searchProps, searchState> {
@@ -47,8 +48,8 @@ export class Search extends React.Component<searchProps, searchState> {
                 <Row>
                     {this.state.trees.length > 0 ? <h1 className='w-100'>Found Families:</h1> : null}
                     {this.state.trees.map((t) => {
-                        return <div key={t.uuid} className="col col-md-3">
-                            <Link to={`/family/${t.uuid}`}>{t.name}</Link>
+                        return <div key={t.uuid} className="col col-md-2">
+                            <Link to={`/family_overview/${t.uuid}`}><i className="fas fa-tree"/> {t.name}</Link>
                         </div>
                     })}
                 </Row>
@@ -65,7 +66,7 @@ export class Search extends React.Component<searchProps, searchState> {
     }
 }
 
-class PersonSearchCard extends React.Component<{ person: PersonBase }> {
+class PersonSearchCard extends React.Component<{ person: typePersonBase }> {
 
     render() {
         let p = this.props.person;
@@ -73,13 +74,21 @@ class PersonSearchCard extends React.Component<{ person: PersonBase }> {
             <Card.Img variant="top" className='user-image small'
                       src={p.image ? p.image : "/FamilyTree/images/user-default.png"}/>
             <Card.Body>
-                <Card.Title>{p.name} [{p.gender.substr(0, 1)}]</Card.Title>
+                <Card.Title>{p.name} [{this.getIcon()}]</Card.Title>
                 <Card.Subtitle className=" mb-2 text-muted">in {p.family}</Card.Subtitle>
                 <Card.Text>
                     {p.birthday.toDateString()}
                 </Card.Text>
-                <Link to={`/person/${p.uuid}`} className="stretched-link"/>
+                <Link to={`/person_overview/${p.uuid}`} className="stretched-link"/>
             </Card.Body>
         </Card>
+    }
+
+    private getIcon() {
+        switch (this.props.person.gender) {
+            case "Male": return <i className="fas fa-mars"/>;
+            case "Female": return <i className="fas fa-venus"/>;
+            case "Other": return <i className="fas fa-genderless"/>;
+        }
     }
 }

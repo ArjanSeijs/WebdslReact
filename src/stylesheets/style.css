@@ -67,3 +67,11 @@ body {
     color: inherit;
     text-decoration:none;
 }
+
+.list-group-flush > .list-group-item:last-child {
+    border-bottom-width: 1px;
+}
+
+.list-group-flush > .list-group-item:first-child {
+    border-top-width: 1px;
+}
