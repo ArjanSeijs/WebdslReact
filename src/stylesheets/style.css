@@ -75,3 +75,11 @@ body {
 .list-group-flush > .list-group-item:first-child {
     border-top-width: 1px;
 }
+
+.v-scroll {
+    overflow-y: auto;
+}
+
+.text-right {
+    text-align: right;
+}

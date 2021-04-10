@@ -3,6 +3,7 @@ import {Card, Container, Row} from "react-bootstrap";
 import {Link} from "react-router-dom";
 import {parsePeopleResults} from "./familyOverview";
 import {typePersonBase} from "./personOverview";
+import {rejected} from "./authencation";
 
 
 type searchState = { people: typePersonBase[], trees: { uuid: string, name: string }[] };
@@ -16,10 +17,7 @@ export class Search extends React.Component<searchProps, searchState> {
     }
 
     componentDidMount() {
-        this.fetchSearch().catch((e) => {
-            alert('Could not reach server');
-            console.error(e)
-        });
+        this.fetchSearch().catch(rejected);
     }
 
     private async fetchSearch() {
@@ -29,20 +27,20 @@ export class Search extends React.Component<searchProps, searchState> {
             let people = await parsePeopleResults(results);
             this.setState({people: people, trees: results.trees})
         } else {
-            alert('Could not reach server')
+            throw new Error(response.statusText);
         }
     }
 
     componentDidUpdate(prevProps: Readonly<searchProps>, prevState: Readonly<searchState>, snapshot?: any) {
         if (prevProps.query !== this.props.query) {
-            this.fetchSearch().catch((e) => {
-                alert('Could not reach server');
-                console.error(e)
-            });
+            this.fetchSearch().catch(rejected);
         }
     }
 
     render() {
+        if(this.state.trees.length === 0 && this.state.people.length === 0) {
+            return <Container><h1>No Search results for: {this.props.query}</h1></Container>
+        }
         return (
             <Container fluid className="container body">
                 <Row>
@@ -90,5 +88,6 @@ class PersonSearchCard extends React.Component<{ person: typePersonBase }> {
             case "Female": return <i className="fas fa-venus"/>;
             case "Other": return <i className="fas fa-genderless"/>;
         }
+        return <></>;
     }
 }
