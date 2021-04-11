@@ -7,18 +7,20 @@ import {AuthenticationState, rejected} from "./authencation";
 import {observer} from "mobx-react";
 import {toHashMap} from "./util";
 
-type typeDate = { min: number, minValue: number, max: number, maxValue: number, scale: number };
-/** direction : sort ascending or descending, sortFunc : comparator, genders : the genders to display, search : users to filter, dates : sliders for dates values*/
+/** Represents min and max values of the birthday and passingdate filters and step value*/
+type typeDateFilter = { min: number, minValue: number, max: number, maxValue: number, stepValue: number };
+/** direction : sort ascending or descending, sortFunc : comparator, genders : the genders to display, search : users to filter, dates : selection for dates values*/
 type typeFilterState = {
+    loaded : boolean,
     direction: 1 | -1,
     sort: string,
     sortFunc: (a: typePerson, b: typePerson) => number,
     genders: string[],
     status: { alive: boolean, deceased: boolean },
     search: string,
-    dates: { birthday: typeDate, passingdate: typeDate }
+    dates: { birthday: typeDateFilter, passingdate: typeDateFilter }
 };
-/** */
+/** List of people and name of this family tree and username of the owner. */
 type typeFamilyState = { people: typePerson[], name: string, owner: string };
 
 /** {@see FamilyOverview}*/
@@ -26,17 +28,23 @@ type familyOverviewState = typeFamilyState & typeFilterState;
 /** {@see FamilyOverview}*/
 type familyOverviewType = { uuid: string };
 
+/**
+ * Component that displays all people in this tree and options for filtering & sorting them
+ */
 @observer
 export class FamilyOverview extends React.Component<familyOverviewType, familyOverviewState> {
 
     constructor(props: familyOverviewType) {
         super(props);
         let sortFunc = this.sortName.bind(this);
+
+        // Initial state
         let filters: string[] = [];
         let alive = {alive: false, deceased: false}
         let year = new Date().getFullYear();
-        let dates = {min: year - 2, max: year + 1, minValue: year - 2, maxValue: year + 1, scale: 1};
+        let dates = {min: year - 2, max: year + 1, minValue: year - 2, maxValue: year + 1, stepValue: 1};
         this.state = {
+            loaded : false,
             people: [],
             direction: 1,
             sort: 'Name',
@@ -52,18 +60,20 @@ export class FamilyOverview extends React.Component<familyOverviewType, familyOv
 
     /**
      * Retrieves all the people in this family and transforms it using {@link parsePeopleResults}
+     * Then updates the filters
      */
     async fetchPeople() {
         let response = await fetch(`/FamilyTree/user_people/${this.props.uuid}`);
         if (response.ok) {
             let result = await response.json();
             let people = await parsePeopleResults<typePerson>(result);
-            let now = new Date();
-            let birthday = people.map(p => p.birthday.getFullYear())
-            let passingdate = people.map(p => p.passingdate?.getFullYear() || now.getFullYear());
+            this.setState({people: people, name: result.name, owner: result.owner, loaded : true})
 
-            this.setState({people: people, name: result.name, owner: result.owner})
+            // If we found people parse it
             if (people.length > 0) {
+                let now = new Date();
+                let birthday = people.map(p => p.birthday.getFullYear())
+                let passingdate = people.map(p => p.passingdate?.getFullYear() || now.getFullYear());
                 this.parseDays(birthday, passingdate, now);
             }
         }
@@ -75,7 +85,7 @@ export class FamilyOverview extends React.Component<familyOverviewType, familyOv
      * @param min
      * @private
      */
-    private getScale(max: number, min: number): number {
+    private getStepValue(max: number, min: number): number {
         if (max - min <= 20) {
             return 1;
         }
@@ -91,12 +101,19 @@ export class FamilyOverview extends React.Component<familyOverviewType, familyOv
         return 50;
     }
 
+    /**
+     *
+     * @param birthday
+     * @param passingdate
+     * @param now
+     * @private
+     */
     private parseDays(birthday: number[], passingdate: number[], now: Date) {
         let minBday = Math.min(...birthday);
         let minPday = Math.min(...passingdate);
         let year = now.getFullYear();
-        let bdayScale = this.getScale(year, minBday);
-        let pdayScale = this.getScale(year, minPday);
+        let bdayScale = this.getStepValue(year, minBday);
+        let pdayScale = this.getStepValue(year, minPday);
 
         let birthdayMinValue = Math.floor(minBday / bdayScale) * bdayScale;
         let birthdayMaxValue = Math.ceil(year / bdayScale) * bdayScale;
@@ -107,8 +124,8 @@ export class FamilyOverview extends React.Component<familyOverviewType, familyOv
         if (pdayScale === 1) passingdateMaxValue++;
 
         let dates = {
-            birthday: {min: birthdayMinValue, max: birthdayMaxValue, minValue: birthdayMinValue, maxValue: birthdayMaxValue, scale: bdayScale},
-            passingdate: {min: passingdateMinValue, max: passingdateMaxValue, minValue: passingdateMinValue, maxValue: passingdateMaxValue, scale: pdayScale}
+            birthday: {min: birthdayMinValue, max: birthdayMaxValue, minValue: birthdayMinValue, maxValue: birthdayMaxValue, stepValue: bdayScale},
+            passingdate: {min: passingdateMinValue, max: passingdateMaxValue, minValue: passingdateMinValue, maxValue: passingdateMaxValue, stepValue: pdayScale}
         }
         console.log(dates)
         this.setState({dates})
@@ -204,7 +221,7 @@ export class FamilyOverview extends React.Component<familyOverviewType, familyOv
                 </InputGroup>
             </Form>
             <Row>
-                {this.state.people.length === 0 ? <div>Loading ... </div> :
+                {!this.state.loaded ? <div>Loading ... </div> :
                     this.state.people
                         .filter((p) => this.filterFunc(p))
                         .filter((p) => this.searchFunc(p))
@@ -216,7 +233,6 @@ export class FamilyOverview extends React.Component<familyOverviewType, familyOv
     }
 
     private renderDateSelect() {
-        // return <div className={"p-2"}>{this.renderDateSlider("fa-chevron-left", this.state.dates.minValue)}{this.renderDateSlider("fa-chevron-right",this.state.dates.maxValue)}</div>
         return <div className={"p-2 w-100"}>
             <InputGroup>
                 <InputGroup.Prepend> <InputGroup.Text>
@@ -255,14 +271,24 @@ export class FamilyOverview extends React.Component<familyOverviewType, familyOv
         </div>
     }
 
-    private dates(date: typeDate, max: boolean): number[] {
+    /**
+     * Gets array with all the dates based on the min, max and stepValue
+     * @param date
+     * @param max
+     * @private
+     */
+    private dates(date: typeDateFilter, max: boolean): number[] {
         let numbers = [];
-        for (let i = date.min; i < date.max; i += date.scale) {
-            numbers.push(i + (max ? date.scale : 0));
+        for (let i = date.min; i < date.max; i += date.stepValue) {
+            numbers.push(i + (max ? date.stepValue : 0));
         }
         return numbers;
     }
 
+    /**
+     * Make a request to a create a new person and rederict to its edit page on succes
+     * @private
+     */
     private async newPerson() {
         let response = await fetch(`/FamilyTree/user_newPerson/${this.props.uuid}`, {method: 'POST'});
         if (!response.ok) throw new Error(response.statusText);
@@ -291,24 +317,32 @@ export class FamilyOverview extends React.Component<familyOverviewType, familyOv
         }
     }
 
+    /**
+     * Update the filter values of the dates
+     * We always want min to be less than max (and vice versa)
+     * @param e
+     * @private
+     */
     private updateDates(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
         let target = e.target as HTMLSelectElement;
         let id = target.id;
         this.setState(prev => {
-            let passingdate: typeDate = {...prev.dates.passingdate};
-            let birthday: typeDate = {...prev.dates.birthday}
+            // Keep track of old state
+            let passingdate: typeDateFilter = {...prev.dates.passingdate};
+            let birthday: typeDateFilter = {...prev.dates.birthday}
+            // Update depenedent on the input
             if (id === "minBday") {
                 birthday.minValue = parseInt(target.value);
-                birthday.maxValue = Math.max(birthday.minValue + birthday.scale, birthday.maxValue)
+                birthday.maxValue = Math.max(birthday.minValue + birthday.stepValue, birthday.maxValue)
             } else if (id === "maxBday") {
                 birthday.maxValue = parseInt(target.value);
-                birthday.minValue = Math.min(birthday.maxValue - birthday.scale, birthday.minValue)
+                birthday.minValue = Math.min(birthday.maxValue - birthday.stepValue, birthday.minValue)
             } else if (id === "minPday") {
                 passingdate.minValue = parseInt(target.value);
-                passingdate.maxValue = Math.max(passingdate.minValue + passingdate.scale, passingdate.maxValue)
+                passingdate.maxValue = Math.max(passingdate.minValue + passingdate.stepValue, passingdate.maxValue)
             } else if (id === "maxPday") {
                 passingdate.maxValue = parseInt(target.value);
-                passingdate.minValue = Math.min(passingdate.maxValue - passingdate.scale, passingdate.minValue)
+                passingdate.minValue = Math.min(passingdate.maxValue - passingdate.stepValue, passingdate.minValue)
             }
             return {dates: {passingdate, birthday}}
         });
@@ -446,8 +480,8 @@ export class FamilyOverview extends React.Component<familyOverviewType, familyOv
         let statusSelected = (!state.status.alive && !state.status.deceased)
         let statusCorrect = (state.status.alive && !p.passingdate) || (state.status.deceased && !!p.passingdate);
 
-        let correctBirthday = p.birthday.getFullYear() >= this.state.dates.birthday.minValue && p.birthday.getFullYear() < this.state.dates.birthday.maxValue;
         let passingdate = p.passingdate || new Date();
+        let correctBirthday = p.birthday.getFullYear() >= this.state.dates.birthday.minValue && p.birthday.getFullYear() < this.state.dates.birthday.maxValue;
         let correctPassingdate = passingdate.getFullYear() >= this.state.dates.passingdate.minValue && passingdate.getFullYear() < this.state.dates.passingdate.maxValue;
 
         return gender && (statusSelected || statusCorrect) && correctBirthday && correctPassingdate;

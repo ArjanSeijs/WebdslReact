@@ -7,9 +7,8 @@ import {AuthenticationState, rejected} from "./authencation";
 import {age} from "./util";
 
 
-
 /** Represents parent, child, or sibling */
-export type typePersonId = { uuid: string, name: string, fullname : string };
+export type typePersonId = { uuid: string, name: string, fullname: string };
 
 /** Represents a person with all non-null attributes */
 export type typePersonBase = { family: string; birthday: Date, gender: string, image?: string } & typePersonId;
@@ -28,7 +27,7 @@ export type typePersonCardProps = { link?: string, faIcon: string, pre?: string,
 /** Props for {@see PersonOverview}*/
 export type typePersonOverviewProps = { uuid: string };
 /** State for {@see PersonOverview}*/
-export type typePersonOverviewState = { person: typePersonAll, owner: string };
+export type typePersonOverviewState = { person: typePersonAll, owner: string, canEdit: boolean };
 
 /**
  * A page of a person displaying all information
@@ -50,7 +49,7 @@ export class PersonOverview extends React.Component<typePersonOverviewProps, typ
 
     render() {
         if (!this.state) return <Container><Card>Loading.. </Card></Container>
-        let editable = this.state.owner && this.state.owner === AuthenticationState.instance.username && AuthenticationState.instance.isLoggedIn();
+        let editable = (this.state.owner === AuthenticationState.instance.username || this.state.canEdit) && AuthenticationState.instance.isLoggedIn();
         let p = this.state.person;
 
         return <Container className={"p-3 h-auto"}>
@@ -165,7 +164,7 @@ export async function fetchPerson(uuid: string): Promise<typePersonOverviewState
     if (!response.ok) throw new Error(response.statusText);
     let result = await response.json();
     let person = await parsePersonResults<typePersonAll>(result.person);
-    return {person: person, owner: result.owner} as typePersonOverviewState;
+    return {person: person, owner: result.owner, canEdit : result.canEdit} as typePersonOverviewState;
 }
 
 /**

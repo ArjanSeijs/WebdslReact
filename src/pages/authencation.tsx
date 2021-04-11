@@ -6,8 +6,8 @@ type authProps = { title: string };
 type authState = { username: string, password: string }
 
 /**
- * Stores the username and uses a singleton that will be used by an observer to
- * update the application state.
+ * State that stores the current username if logged in, or an empty string if not logged in.
+ * The state is updated with {@link AuthenticationState#update} by checking the server if the current session is still valid.
  */
 export class AuthenticationState {
     static instance = new AuthenticationState();
@@ -39,7 +39,7 @@ export class AuthenticationState {
 
     /**
      * Checks if the user is logged in by checking the current state.
-     * This does not ask the server if it is correct {@link update} for this.
+     * This does not ask the server if it is correct, {@link update} will validate it with the server.
      */
     isLoggedIn() {
         return !!this.username;
@@ -64,6 +64,7 @@ export class AuthenticationState {
 
 /**
  * React Component that holds a card with a form for registering and logging in.
+ * The states keep track of the input fields.
  */
 abstract class AuthComponent extends React.Component<authProps, authState> {
 
@@ -72,8 +73,16 @@ abstract class AuthComponent extends React.Component<authProps, authState> {
         this.state = {username: '', password: ''};
     }
 
+    /**
+     * Called when the form is submitted.
+     * @param e
+     */
     abstract handleSubmit(e: React.FormEvent<HTMLFormElement>): void;
 
+    /**
+     * Update fields
+     * @param event
+     */
     handleChange(event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
         const target = event.target;
         const value = target.value;
@@ -86,13 +95,13 @@ abstract class AuthComponent extends React.Component<authProps, authState> {
             <Card>
                 <Card.Body>
                     <Card.Title>{this.props.title}</Card.Title>
-                    {this.getForm()}
+                    {this.renderForm()}
                 </Card.Body>
             </Card>
         )
     }
 
-    private getForm() {
+    private renderForm() {
         return (
             <Form onSubmit={(e) => this.handleSubmit(e)}>
                 <Form.Label>
@@ -153,8 +162,8 @@ export class LogoutComponent extends React.Component {
 }
 
 /**
- * Registers the user
- * @throws Error if response failed
+ * Register the user with the username and password,
+ * @throws Error if request failed
  * @param username
  * @param password
  */
@@ -175,6 +184,7 @@ async function register(username: string, password: string): Promise<string> {
 
 /**
  * Login user
+ * @throws Error if request failed
  * @param username
  * @param password
  * @return the username of if succeeded.
@@ -197,7 +207,8 @@ async function login(username: string, password: string): Promise<string> {
 }
 
 /**
- * Logout
+ * Log the user out
+ * @throws Error if request failed
  */
 async function logout(): Promise<void> {
     let response = await fetch('/FamilyTree/user_logout', {redirect: "manual"})
@@ -213,7 +224,10 @@ async function logout(): Promise<void> {
  * display popup depending on the error and log the error to console
  * @param e
  */
-export function rejected(e: any) {
+export function rejected(e: Error) {
+    console.warn(e.name)
+    console.warn(e.message)
+    console.error(e)
     if (e.message === "NetworkError when attempting to fetch resource.") {
         alert('Access denied, invalid permissions')
         window.location.pathname = '/'
@@ -222,6 +236,4 @@ export function rejected(e: any) {
     } else {
         alert(e.message);
     }
-
-    console.error(e)
 }
