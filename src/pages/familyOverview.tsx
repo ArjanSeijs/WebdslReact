@@ -502,7 +502,7 @@ export async function parsePeopleResults<T extends typePersonBase>(results: any)
     return await Promise.all<T>(results.people.map(async (p: any) => {
         p = await parsePersonResults(p)
         p.parents = p.parents?.map((uuid: string) => {
-            return {uuid: uuid, name: people[uuid]?.name}
+            return {uuid: uuid, name: people[uuid]?.name, fullname : people[uuid]?.fullname}
         });
         return p as T;
     }));

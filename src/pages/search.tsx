@@ -69,7 +69,7 @@ class PersonSearchCard extends React.Component<{ person: typePersonBase }> {
             <Card.Img variant="top" className='user-image small'
                       src={p.image ? p.image : "/FamilyTree/images/user-default.png"}/>
             <Card.Body>
-                <Card.Title>{p.name} [{this.getIcon()}]</Card.Title>
+                <Card.Title>{p.fullname} [{this.getIcon()}]</Card.Title>
                 <Card.Subtitle className=" mb-2 text-muted">in {p.family}</Card.Subtitle>
                 <Card.Text>
                     <i className="fas fa-birthday-cake"/> { p.birthday.toDateString()}

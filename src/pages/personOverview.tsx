@@ -111,8 +111,8 @@ class PersonCardListBase<T extends typePerson> extends React.Component<{ person:
             <PersonCardItem faIcon="fas fa-cross" value={passingdate?.toDateString()} placeholder="Alive"/>
             <PersonCardItem faIcon="fas fa-city" value={birthplace} placeholder="Birthplace"/>
             <PersonCardItem faIcon="fas fa-calendar-alt" value={age(passingdate || new Date(), birthday) + " years"}/>
-            <PersonCardItem link={p0 ? `/person_overview/${p0.uuid}` : undefined} faIcon="fas fa-user-tie" value={p0?.name} placeholder="Parent"/>
-            <PersonCardItem link={p1 ? `/person_overview/${p1.uuid}` : undefined} faIcon="fas fa-user-tie" value={p1?.name} placeholder="Parent"/>
+            <PersonCardItem link={p0 ? `/person_overview/${p0.uuid}` : undefined} faIcon="fas fa-user-tie" value={p0?.fullname} placeholder="Parent"/>
+            <PersonCardItem link={p1 ? `/person_overview/${p1.uuid}` : undefined} faIcon="fas fa-user-tie" value={p1?.fullname} placeholder="Parent"/>
         </>;
     }
 
@@ -129,8 +129,8 @@ class PersonCardListExtended extends PersonCardListBase<typePersonAll> {
             <PersonCardItem faIcon="fas fa-tag" pre="Middle Name(s) : " value={middlenames}/>
             <PersonCardItem faIcon="fas fa-tag" pre="Lastname : " value={lastname}/>
             {super.getListGroup()}
-            {children?.map(c => <PersonCardItem link={`/person_overview/${c.uuid}`} key={c.uuid} faIcon="fas fa-baby" value={c.name}/>)}
-            {siblings?.map(s => <PersonCardItem link={`/person_overview/${s.uuid}`} key={s.uuid} faIcon="fas fa-user-friends" value={s.name}/>)}
+            {children?.map(c => <PersonCardItem link={`/person_overview/${c.uuid}`} key={c.uuid} faIcon="fas fa-baby" value={c.fullname}/>)}
+            {siblings?.map(s => <PersonCardItem link={`/person_overview/${s.uuid}`} key={s.uuid} faIcon="fas fa-user-friends" value={s.fullname}/>)}
         </ListGroup>;
     }
 }

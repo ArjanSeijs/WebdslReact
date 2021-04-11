@@ -98,11 +98,3 @@ body {
         width: 90%;
     }
 }
-
-/*input[type=range].vertical {*/
-/*    writing-mode: bt-lr; !* IE *!*/
-/*    -webkit-appearance: slider-vertical; !* WebKit *!*/
-/*    width: 8px;*/
-/*    height: 175px;*/
-/*    padding: 0 5px;*/
-/*}*/
