@@ -142,11 +142,8 @@ class TreeList extends React.Component<{}, typeTreeListState> {
             headers: {'Content-Type': 'application/json'},
             body: name
         })
-        if (response.ok) {
-            let {uuid} = await response.json();
-            window.location.pathname = `/family_overview/${uuid}`;
-        } else {
-            throw new Error(response.statusText);
-        }
+        if (!response.ok) throw new Error(response.statusText);
+        let {uuid} = await response.json();
+        window.location.pathname = `/family_overview/${uuid}`;
     }
 }

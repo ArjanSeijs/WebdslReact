@@ -51,16 +51,13 @@ export class AuthenticationState {
      */
     async update() {
         let response = await fetch('/FamilyTree/user_name')
-        if (response.ok) {
-            let json = await response.json();
-            if (json.status === 'loggedin') {
-                this.login(json.username);
-            } else {
-                this.logout();
-            }
+        if (!response.ok) throw new Error(response.statusText)
 
+        let json = await response.json();
+        if (json.status === 'loggedin') {
+            this.login(json.username);
         } else {
-            throw new Error(response.statusText)
+            this.logout();
         }
     }
 }
@@ -169,13 +166,10 @@ async function register(username: string, password: string): Promise<string> {
         },
         body: JSON.stringify({username, password})
     })
-    if (response.ok) {
-        let json = await response.json();
-        alert(json.message)
-        return username;
-    } else {
-        throw new Error(response.statusText)
-    }
+    if (!response.ok) throw new Error(response.statusText)
+    let json = await response.json();
+    alert(json.message)
+    return username;
 
 }
 
@@ -193,16 +187,13 @@ async function login(username: string, password: string): Promise<string> {
         },
         body: JSON.stringify({username, password})
     })
-    if (response.ok) {
-        let json = await response.json();
 
-        if (json.status !== 'success') {
-            throw new Error(json.message);
-        }
-        alert(json.message)
-        return json.username;
-    }
-    throw new Error(response.statusText)
+    if (!response.ok) throw new Error(response.statusText)
+
+    let json = await response.json();
+    if (json.status !== 'success') throw new Error(json.message);
+    alert(json.message)
+    return json.username;
 }
 
 /**
@@ -210,15 +201,11 @@ async function login(username: string, password: string): Promise<string> {
  */
 async function logout(): Promise<void> {
     let response = await fetch('/FamilyTree/user_logout', {redirect: "manual"})
-    if (response.ok) {
-        let json = await response.json();
-        if (json.status !== 'success') {
-            throw new Error(json.message);
-        }
-        alert('Logged out!')
-    } else {
-        throw new Error(response.statusText)
-    }
+    if (!response.ok) throw new Error(response.statusText)
+
+    let json = await response.json();
+    if (json.status !== 'success') throw new Error(json.message);
+    alert('Logged out!')
 }
 
 /**

@@ -7,8 +7,17 @@ import {AuthenticationState, rejected} from "./authencation";
 import {observer} from "mobx-react";
 import {toHashMap} from "./util";
 
-/** direction : sort ascending or descending, sortFunc : comparator, genders : the genders to display, search : users to filter*/
-type typeFilterState = { direction: 1 | -1; sort: string, sortFunc: (a: typePerson, b: typePerson) => number; genders: string[], status: { alive: boolean, deceased: boolean }, search: string; };
+type typeDate = { min: number, minValue: number, max: number, maxValue: number, scale: number };
+/** direction : sort ascending or descending, sortFunc : comparator, genders : the genders to display, search : users to filter, dates : sliders for dates values*/
+type typeFilterState = {
+    direction: 1 | -1,
+    sort: string,
+    sortFunc: (a: typePerson, b: typePerson) => number,
+    genders: string[],
+    status: { alive: boolean, deceased: boolean },
+    search: string,
+    dates: { birthday: typeDate, passingdate: typeDate }
+};
 /** */
 type typeFamilyState = { people: typePerson[], name: string, owner: string };
 
@@ -25,7 +34,20 @@ export class FamilyOverview extends React.Component<familyOverviewType, familyOv
         let sortFunc = this.sortName.bind(this);
         let filters: string[] = [];
         let alive = {alive: false, deceased: false}
-        this.state = {people: [], direction: 1, sort: 'Name', genders: filters, status: alive, search: '', sortFunc, name: '', owner: ''};
+        let year = new Date().getFullYear();
+        let dates = {min: year - 2, max: year + 1, minValue: year - 2, maxValue: year + 1, scale: 1};
+        this.state = {
+            people: [],
+            direction: 1,
+            sort: 'Name',
+            genders: filters,
+            status: alive,
+            search: '',
+            sortFunc,
+            name: '',
+            owner: '',
+            dates: {birthday: dates, passingdate: dates}
+        };
     }
 
     /**
@@ -36,8 +58,60 @@ export class FamilyOverview extends React.Component<familyOverviewType, familyOv
         if (response.ok) {
             let result = await response.json();
             let people = await parsePeopleResults<typePerson>(result);
+            let now = new Date();
+            let birthday = people.map(p => p.birthday.getFullYear())
+            let passingdate = people.map(p => p.passingdate?.getFullYear() || now.getFullYear());
+
             this.setState({people: people, name: result.name, owner: result.owner})
+            if (people.length > 0) {
+                this.parseDays(birthday, passingdate, now);
+            }
         }
+    }
+
+    /**
+     * Determine a scale depended on the difference so that the selection
+     * @param max
+     * @param min
+     * @private
+     */
+    private getScale(max: number, min: number): number {
+        if (max - min <= 20) {
+            return 1;
+        }
+        if (max - min <= 100) {
+            return 5;
+        }
+        if (max - min <= 200) {
+            return 10;
+        }
+        if (max - min <= 400) {
+            return 20;
+        }
+        return 50;
+    }
+
+    private parseDays(birthday: number[], passingdate: number[], now: Date) {
+        let minBday = Math.min(...birthday);
+        let minPday = Math.min(...passingdate);
+        let year = now.getFullYear();
+        let bdayScale = this.getScale(year, minBday);
+        let pdayScale = this.getScale(year, minPday);
+
+        let birthdayMinValue = Math.floor(minBday / bdayScale) * bdayScale;
+        let birthdayMaxValue = Math.ceil(year / bdayScale) * bdayScale;
+        let passingdateMinValue = Math.floor(minPday / pdayScale) * pdayScale;
+        let passingdateMaxValue = Math.ceil(year / pdayScale) * pdayScale;
+
+        if (bdayScale === 1) birthdayMaxValue++;
+        if (pdayScale === 1) passingdateMaxValue++;
+
+        let dates = {
+            birthday: {min: birthdayMinValue, max: birthdayMaxValue, minValue: birthdayMinValue, maxValue: birthdayMaxValue, scale: bdayScale},
+            passingdate: {min: passingdateMinValue, max: passingdateMaxValue, minValue: passingdateMinValue, maxValue: passingdateMaxValue, scale: pdayScale}
+        }
+        console.log(dates)
+        this.setState({dates})
     }
 
     componentDidMount() {
@@ -60,24 +134,25 @@ export class FamilyOverview extends React.Component<familyOverviewType, familyOv
                 headers: {'Content-Type': 'application/json'},
                 body: newName
             })
-            if (response.ok) {
-                this.setState({name: newName})
-            } else {
-                throw new Error(response.statusText);
-            }
+            if (!response.ok) throw new Error(response.statusText);
+            this.setState({name: newName})
         }
     }
 
     render() {
         let editable = this.state.owner === AuthenticationState.instance.username && AuthenticationState.instance.isLoggedIn();
         return <Container className="p-2">
-            <h1>{this.state.name}
-                {!editable ? null : <Button onClick={() => this.editName().catch(rejected)}><i className="fas fa-pen-square"/></Button>}
+            <h1>{this.state.name + ' '}
+                {!editable ? null : <sup><Button size={"sm"} variant="outline-secondary" onClick={() => this.editName().catch(rejected)}><i
+                    className="fas fa-pencil-alt"/></Button></sup>}
             </h1>
             <Form onChange={(e) => this.filterChange(e)}>
-                <InputGroup className="mb-3">
+                <InputGroup>
                     <Form.Control placeholder="Search" aria-label="search" aria-describedby="basic-addon2" data-type='search'/>
-                    <DropdownButton as={InputGroup.Append} variant="secondary" title="Filter" id="input-group-dropdown-filter">
+                    <DropdownButton className='w-auto' as={InputGroup.Append} variant="secondary" title="Date" id="input-group-dropdown-filter">
+                        {this.renderDateSelect()}
+                    </DropdownButton>
+                    <DropdownButton as={InputGroup.Append} className="border-right" variant="secondary" title="Filter" id="input-group-dropdown-filter">
                         <div className="dropdown-item deco-none">
                             <Form.Check custom type={"checkbox"} data-type='filter-alive' id={"Alive"} label={"Alive"}/>
                         </div>
@@ -112,7 +187,7 @@ export class FamilyOverview extends React.Component<familyOverviewType, familyOv
                     </DropdownButton>
                     <InputGroup.Append>
 
-                        <Button variant="primary" onClick={() => this.toggleDir()}>
+                        <Button variant="primary" onClick={this.toggleDir.bind(this)}>
                             {(() => {
                                 let sort = this.state.sort;
                                 let direction = this.state.direction;
@@ -122,6 +197,10 @@ export class FamilyOverview extends React.Component<familyOverviewType, familyOv
                             })()}
                         </Button>
                     </InputGroup.Append>
+                    {!editable ? null :
+                        <InputGroup.Append>
+                            <Button variant="success" onClick={() => this.newPerson().catch(rejected)}><i className="fas fa-user-plus"/> </Button>
+                        </InputGroup.Append>}
                 </InputGroup>
             </Form>
             <Row>
@@ -136,23 +215,103 @@ export class FamilyOverview extends React.Component<familyOverviewType, familyOv
         </Container>
     }
 
+    private renderDateSelect() {
+        // return <div className={"p-2"}>{this.renderDateSlider("fa-chevron-left", this.state.dates.minValue)}{this.renderDateSlider("fa-chevron-right",this.state.dates.maxValue)}</div>
+        return <div className={"p-2 w-100"}>
+            <InputGroup>
+                <InputGroup.Prepend> <InputGroup.Text>
+                    <i className="fa fa-chevron-left"/><i className="fa fa-birthday-cake"/>
+                </InputGroup.Text></InputGroup.Prepend>
+                <Form.Control as='select' value={this.state.dates.birthday.minValue} onChange={this.updateDates.bind(this)} data-type={"date"} id={"minBday"}>
+                    {this.dates(this.state.dates.birthday, false).map((year) => <option value={year} key={"min" + year}>{year}</option>)}
+                </Form.Control>
+            </InputGroup>
+            <InputGroup>
+                <Form.Control as='select' value={this.state.dates.birthday.maxValue} onChange={this.updateDates.bind(this)} data-type={"date"} id={"maxBday"}>
+                    {this.dates(this.state.dates.birthday, true).map((year) => <option value={year} key={"max" + year}>{year}</option>)}
+                </Form.Control>
+                <InputGroup.Append> <InputGroup.Text>
+                    <i className="fa fa-birthday-cake"/><i className="fa fa-chevron-right"/>
+                </InputGroup.Text></InputGroup.Append>
+            </InputGroup>
+            <InputGroup>
+                <InputGroup.Prepend> <InputGroup.Text>
+                    <i className="fa fa-chevron-left"/><i className="fa fa-cross"/>
+                </InputGroup.Text></InputGroup.Prepend>
+                <Form.Control as='select' value={this.state.dates.passingdate.minValue} onChange={this.updateDates.bind(this)} data-type={"date"}
+                              id={"minPday"}>
+                    {this.dates(this.state.dates.passingdate, false).map((year) => <option value={year} key={"min" + year}>{year}</option>)}
+                </Form.Control>
+            </InputGroup>
+            <InputGroup>
+                <Form.Control as='select' value={this.state.dates.passingdate.maxValue} onChange={this.updateDates.bind(this)} data-type={"date"}
+                              id={"maxPday"}>
+                    {this.dates(this.state.dates.passingdate, true).map((year) => <option value={year} key={"max" + year}>{year}</option>)}
+                </Form.Control>
+                <InputGroup.Append> <InputGroup.Text>
+                    <i className="fa fa-cross"/><i className="fa fa-chevron-right"/>
+                </InputGroup.Text></InputGroup.Append>
+            </InputGroup>
+        </div>
+    }
+
+    private dates(date: typeDate, max: boolean): number[] {
+        let numbers = [];
+        for (let i = date.min; i < date.max; i += date.scale) {
+            numbers.push(i + (max ? date.scale : 0));
+        }
+        return numbers;
+    }
+
+    private async newPerson() {
+        let response = await fetch(`/FamilyTree/user_newPerson/${this.props.uuid}`, {method: 'POST'});
+        if (!response.ok) throw new Error(response.statusText);
+        let json = await response.json();
+        let uuid = json.uuid;
+        window.location.pathname = `/person_edit/${uuid}`
+    }
+
+
     /**
      *  We update the filters on form value changes
      * @param e
      * @private
      */
     private filterChange(e: React.FormEvent<HTMLFormElement>) {
-        let target = e.target as HTMLInputElement;
+        let target = e.target as HTMLElement;
         let type = target.getAttribute('data-type');
         if (type === 'sort') {
-            this.updateSort(target);
+            this.updateSort(target as HTMLInputElement);
         } else if (type === 'filter-gender') {
-            this.updateGenderFilter(target);
+            this.updateGenderFilter(target as HTMLInputElement);
         } else if (type === 'filter-alive') {
-            this.updateAliveFilter(target);
+            this.updateAliveFilter(target as HTMLInputElement);
         } else if (type === 'search') {
-            this.updateSearch(target);
+            this.updateSearch(target as HTMLInputElement);
         }
+    }
+
+    private updateDates(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
+        let target = e.target as HTMLSelectElement;
+        let id = target.id;
+        this.setState(prev => {
+            let passingdate: typeDate = {...prev.dates.passingdate};
+            let birthday: typeDate = {...prev.dates.birthday}
+            if (id === "minBday") {
+                birthday.minValue = parseInt(target.value);
+                birthday.maxValue = Math.max(birthday.minValue + birthday.scale, birthday.maxValue)
+            } else if (id === "maxBday") {
+                birthday.maxValue = parseInt(target.value);
+                birthday.minValue = Math.min(birthday.maxValue - birthday.scale, birthday.minValue)
+            } else if (id === "minPday") {
+                passingdate.minValue = parseInt(target.value);
+                passingdate.maxValue = Math.max(passingdate.minValue + passingdate.scale, passingdate.maxValue)
+            } else if (id === "maxPday") {
+                passingdate.maxValue = parseInt(target.value);
+                passingdate.minValue = Math.min(passingdate.maxValue - passingdate.scale, passingdate.minValue)
+            }
+            return {dates: {passingdate, birthday}}
+        });
     }
 
     /**
@@ -283,9 +442,15 @@ export class FamilyOverview extends React.Component<familyOverviewType, familyOv
     private filterFunc(p: typePerson): boolean {
         let state = this.state;
         let gender = (state.genders.length === 0 || state.genders.indexOf(p.gender) !== -1);
+
         let statusSelected = (!state.status.alive && !state.status.deceased)
         let statusCorrect = (state.status.alive && !p.passingdate) || (state.status.deceased && !!p.passingdate);
-        return gender && (statusSelected || statusCorrect);
+
+        let correctBirthday = p.birthday.getFullYear() >= this.state.dates.birthday.minValue && p.birthday.getFullYear() < this.state.dates.birthday.maxValue;
+        let passingdate = p.passingdate || new Date();
+        let correctPassingdate = passingdate.getFullYear() >= this.state.dates.passingdate.minValue && passingdate.getFullYear() < this.state.dates.passingdate.maxValue;
+
+        return gender && (statusSelected || statusCorrect) && correctBirthday && correctPassingdate;
     }
 
     private searchFunc(p: typePerson): boolean {

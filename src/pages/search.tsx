@@ -2,7 +2,7 @@ import React from "react";
 import {Card, Container, Row} from "react-bootstrap";
 import {Link} from "react-router-dom";
 import {parsePeopleResults} from "./familyOverview";
-import {typePersonBase} from "./personOverview";
+import {typePerson, typePersonBase} from "./personOverview";
 import {rejected} from "./authencation";
 
 
@@ -22,13 +22,10 @@ export class Search extends React.Component<searchProps, searchState> {
 
     private async fetchSearch() {
         let response = await fetch(`/FamilyTree/sv_search/${encodeURI(this.props.query)}`);
-        if (response.ok) {
-            let results = await response.json();
-            let people = await parsePeopleResults(results);
-            this.setState({people: people, trees: results.trees})
-        } else {
-            throw new Error(response.statusText);
-        }
+        if (!response.ok) throw new Error(response.statusText);
+        let results = await response.json();
+        let people = await parsePeopleResults<typePerson>(results);
+        this.setState({people: people, trees: results.trees})
     }
 
     componentDidUpdate(prevProps: Readonly<searchProps>, prevState: Readonly<searchState>, snapshot?: any) {
@@ -75,7 +72,7 @@ class PersonSearchCard extends React.Component<{ person: typePersonBase }> {
                 <Card.Title>{p.name} [{this.getIcon()}]</Card.Title>
                 <Card.Subtitle className=" mb-2 text-muted">in {p.family}</Card.Subtitle>
                 <Card.Text>
-                    {p.birthday.toDateString()}
+                    <i className="fas fa-birthday-cake"/> { p.birthday.toDateString()}
                 </Card.Text>
                 <Link to={`/person_overview/${p.uuid}`} className="stretched-link"/>
             </Card.Body>

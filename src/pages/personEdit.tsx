@@ -1,5 +1,5 @@
 import React, {ChangeEvent} from "react";
-import {fetchPerson, typePersonAll, typePersonBase, typePersonOverviewProps, typePersonOverviewState, typePersonRelation} from "./personOverview";
+import {fetchPerson, typePersonAll, typePersonBase, typePersonOverviewProps, typePersonOverviewState, typePersonId} from "./personOverview";
 import {Button, Card, Col, Container, Form, ListGroup, ListGroupItem, Row} from "react-bootstrap";
 import ReactMarkdown from "react-markdown";
 import {rejected} from "./authencation";
@@ -17,7 +17,9 @@ type typeEditableSelectProps = typeEditableBaseProps<HTMLSelectElement> & { allo
 type typeEditableInputProps = typeEditableBaseProps<HTMLInputElement>
 
 /** State for {@see PersonEdit}*/
-type typePersonCardEditableState = typePersonOverviewState & { validParents: typePersonBase[], editablePerson: typePersonAll }
+type typePersonCardEditableState =
+    typePersonOverviewState
+    & { validParents: typePersonBase[], editablePerson: typePersonAll}
 
 /**
  * Component that holds the data for
@@ -29,54 +31,28 @@ export class PersonEdit extends React.Component<typePersonOverviewProps, typePer
         this.fetch().catch(rejected);
     }
 
+    /**
+     * Fetch both the person and allowed parents, and update state accordingly
+     */
     async fetch() {
         let [{owner, person}, {validParents}] = await Promise.all([fetchPerson(this.props.uuid), this.fetchValidParents()]);
         this.setState({
             owner: owner,
             person: person,
             editablePerson: {...person},
-            validParents: validParents
+            validParents: validParents,
         })
     }
 
+    /**
+     * Get a list in form {uuid : string, name : string}[] with all family members that are allowed to be a parent of this person
+     */
     async fetchValidParents(): Promise<{ validParents: typePersonBase[] }> {
         let response = await fetch(`/FamilyTree/user_validParents/${this.props.uuid}`)
-        if (response.ok) {
-            let json = await response.json();
-            let parents: typePersonBase[] = json.parents;
-            return {validParents: parents};
-        }
-        throw new Error(response.statusText);
-    }
-
-    save() {
-        this.editPerson().catch(rejected);
-    }
-
-    async editPerson() {
-        let editablePerson = this.state.editablePerson;
-        let json = {
-            ...editablePerson,
-            birthday: formatDate(editablePerson.birthday),
-            passingdate: formatDate(editablePerson.passingdate),
-            parents: editablePerson.parents.filter(p => !!p.uuid)
-        }
-        let response = await fetch(`/FamilyTree/user_editPerson/${this.props.uuid}`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(json)
-        })
-        if (response.ok) {
-            let json = await response.json();
-            if(json.status === "success") {
-                alert('Saved');
-                await this.fetch();
-            } else {
-                throw new Error(json.message);
-            }
-        } else {
-            throw new Error(response.statusText);
-        }
+        if (!response.ok) throw new Error(response.statusText);
+        let json = await response.json();
+        let parents: typePersonBase[] = json.parents;
+        return {validParents: parents};
     }
 
     render() {
@@ -87,35 +63,23 @@ export class PersonEdit extends React.Component<typePersonOverviewProps, typePer
                 <Card>
                     <Row className="m-0">
                         <Col md={4} className="p-0 border-right  v-scroll">
-                            <Card.Img variant="top" className='user-image small' src={p.image ? p.image : "/FamilyTree/images/user-default.png"}/>
-                            {/*<this.PersonCardEditList person={p} validParents={this.state.validParents} thiz={this}/>*/}
+                            <Card.Img variant="top" className='user-image small' id="image-preview"
+                                      src={p.image ? p.image : "/FamilyTree/images/user-default.png"}/>
                             {this.renderList()}
                         </Col>
                         <Col md={8}>
-                            <h1>{p.name} <Button onClick={this.save.bind(this)}>Save</Button></h1>
+                            <h1>{p.fullname} <Button onClick={this.save.bind(this)}>Save</Button></h1>
                             <hr/>
-                            <textarea className={'w-100'} defaultValue={p.description || ''} onChange={(e) => this.updateDesc(e)}/>
+                            <textarea className={'w-100 h-50'} defaultValue={p.description || ''} onChange={(e) => this.updateDesc(e)}/>
                             <hr/>
                             <ReactMarkdown>{(p.description || '')}
                             </ReactMarkdown>
-                            <code><pre>
-                                {JSON.stringify(this.state.editablePerson, null, 4)}
-                                </pre>
-                            </code>
                         </Col>
                     </Row>
 
                 </Card>
             </Form>
         </Container>
-    }
-
-    private updateDesc(e: React.ChangeEvent<HTMLTextAreaElement>) {
-        let target = e.target;
-        let description = target.value;
-        this.setState(prevState => {
-            return {editablePerson: {...prevState.editablePerson, description}};
-        });
     }
 
     /**
@@ -153,7 +117,57 @@ export class PersonEdit extends React.Component<typePersonOverviewProps, typePer
         </ListGroup>;
     }
 
+    /**
+     * @see editPerson
+     */
+    save() {
+        this.editPerson().then(() => {
+            alert('Saved');
+            window.location.pathname = `/person_overview/${this.props.uuid}`;
+        }).catch(rejected);
+    }
 
+    /**
+     * Make a post request to the server and edit this person.
+     * We then retrieve the updated values from the server.
+     */
+    async editPerson() {
+        let editablePerson = this.state.editablePerson;
+        let jsonBody = {
+            ...editablePerson,
+            birthday: formatDate(editablePerson.birthday),
+            passingdate: formatDate(editablePerson.passingdate),
+            // If p.uuid is empty then a parent was removed.
+            parents: editablePerson.parents.filter(p => !!p.uuid)
+        }
+        let response = await fetch(`/FamilyTree/user_editPerson/${this.props.uuid}`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(jsonBody)
+        })
+        if (!response.ok) throw new Error(response.statusText);
+
+        let json = await response.json();
+        if (json.status !== "success") throw new Error(json.message);
+        await this.fetch();
+    }
+
+    /**
+     * Live update description
+     * @param e
+     * @private
+     */
+    private updateDesc(e: React.ChangeEvent<HTMLTextAreaElement>) {
+        let target = e.target;
+        let description = target.value;
+        this.setState(prevState => {
+            return {editablePerson: {...prevState.editablePerson, description}};
+        });
+    }
+
+    // <--------------------
+    // State update methods
+    // ====================
     private updateFirstname(e: React.ChangeEvent<HTMLInputElement>) {
         this.setState(prev => ({editablePerson: {...prev.editablePerson, firstname: e.target.value}}))
     }
@@ -186,19 +200,26 @@ export class PersonEdit extends React.Component<typePersonOverviewProps, typePer
 
     private updateParent(e: React.ChangeEvent<HTMLSelectElement>, number: number) {
         this.setState(prev => {
-            let map = toHashMap<typePersonRelation>(prev.validParents, t => t.uuid);
-            let uuid = e.target.value;
-            let name = map[uuid]?.name || '';
+            let map = toHashMap<typePersonId>(prev.validParents, t => t.uuid);
+            let uuid = e.target.value; // is falsy ('') when parent was removed
+            let name = map[uuid]?.name || ''; //is falsy ('') if uuid is falsy.
+            let fullname = map[uuid]?.fullname || ''; //is falsy ('') if uuid is falsy.
 
-            let parents: typePersonRelation[] = [];
+            let parents: typePersonId[] = [];
 
-            parents.push(number === 0 ? {uuid, name} : (prev.editablePerson.parents[0] || {name: '', uuid: ''}))
-            parents.push(number === 1 ? {uuid, name} : (prev.editablePerson.parents[1] || {name: '', uuid: ''}))
+            // Update the values,
+            parents.push(number === 0 ? {uuid, name, fullname} : (prev.editablePerson.parents[0] || {name: '', uuid: '', fullname : ''}))
+            parents.push(number === 1 ? {uuid, name, fullname} : (prev.editablePerson.parents[1] || {name: '', uuid: '', fullname : ''}))
             return {editablePerson: {...prev.editablePerson, parents: parents}};
         })
     }
+
+    // -------------------->
 }
 
+/**
+ * The groupitems
+ */
 abstract class PersonEditFieldBase<T extends HTMLElement, S extends typeEditableBaseProps<T>> extends React.Component<S> {
     render() {
         let width = this.props.pre ? 45 : 90;
@@ -206,7 +227,7 @@ abstract class PersonEditFieldBase<T extends HTMLElement, S extends typeEditable
             <label className="float-lg-left">
                 <i className={this.props.faIcon}/> {this.props.pre || ''}
             </label>
-            <div className={"float-lg-right text-right"} style={{width: width + '%'}}>
+            <div className={"float-lg-right text-right input-w-" + width}>
                 {this.getInput()}
             </div>
         </ListGroupItem>
@@ -215,14 +236,20 @@ abstract class PersonEditFieldBase<T extends HTMLElement, S extends typeEditable
     abstract getInput(): JSX.Element
 }
 
+/**
+ * An input type
+ */
 class PersonEditFieldInput extends PersonEditFieldBase<HTMLInputElement, typeEditableInputProps> {
 
     getInput(): JSX.Element {
-        return <input className={"m-0 w-100"} type={this.props.type} defaultValue={this.props.currentValue as string | number}
+        return <input className={"m-0 w-100 form-control"} type={this.props.type} defaultValue={this.props.currentValue as string | number}
                       placeholder={this.props.placeholder} onChange={(event => this.props.change(event))}/>;
     }
 }
 
+/**
+ * A select type
+ */
 class PersonEditFieldSelect extends PersonEditFieldBase<HTMLSelectElement, typeEditableSelectProps> {
 
     getInput(): JSX.Element {

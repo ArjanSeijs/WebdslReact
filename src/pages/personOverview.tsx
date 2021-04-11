@@ -9,14 +9,14 @@ import {age} from "./util";
 
 
 /** Represents parent, child, or sibling */
-export type typePersonRelation = { uuid: string, name: string };
+export type typePersonId = { uuid: string, name: string, fullname : string };
 
 /** Represents a person with all non-null attributes */
-export type typePersonBase = { family: string; uuid: string, name: string, birthday: Date, gender: string, image?: string };
+export type typePersonBase = { family: string; birthday: Date, gender: string, image?: string } & typePersonId;
 /** Represent optinal data that can be displayed*/
-type typePersonData = { passingdate?: Date, birthplace?: string, parents: typePersonRelation[] }
+type typePersonData = { passingdate?: Date, birthplace?: string, parents: typePersonId[] }
 /** Represent optional data that will be used on the personal page of the person, but not in overviews (family list & search results) */
-type typePersonOptionalData = { children?: typePersonRelation[], siblings?: typePersonRelation[], description?: string, firstname?: string, middlenames?: string, lastname?: string }
+type typePersonOptionalData = { children?: typePersonId[], siblings?: typePersonId[], description?: string, firstname?: string, middlenames?: string, lastname?: string }
 
 /** Union types for person */
 export type typePerson = typePersonBase & typePersonData;
@@ -61,7 +61,7 @@ export class PersonOverview extends React.Component<typePersonOverviewProps, typ
                         <PersonCardListExtended person={p}/>
                     </Col>
                     <Col md={8}>
-                        <h1>{p.name}{!editable ? null : <Link to={`/person_edit/${this.props.uuid}`}><i className="fas fa-pen-square"/></Link>}</h1>
+                        <h1>{p.fullname}{!editable ? null : <Link to={`/person_edit/${this.props.uuid}`}><i className="fas fa-pen-square"/></Link>}</h1>
                         <hr/>
                         <ReactMarkdown>{p.description || ''}</ReactMarkdown>
                     </Col>
@@ -81,7 +81,7 @@ export class PersonCard extends React.Component<{ person: typePerson, link?: boo
         return <Card className="h-100">
             <Card.Img variant="top" className='user-image small' src={p.image ? p.image : "/FamilyTree/images/user-default.png"}/>
             <Card.Body className="p-0">
-                <Card.Title className="p-3">{p.name}</Card.Title>
+                <Card.Title className="p-3">{p.fullname}</Card.Title>
                 <div className="card-text">
                     <PersonCardListBase person={p}/>
                 </div>
@@ -158,15 +158,14 @@ class PersonCardItem extends React.Component<typePersonCardProps> {
 /**
  * Retrieves person with uuid from the server and transforms it using {@link parsePersonResults}
  * @param uuid
+ * @param all
  */
 export async function fetchPerson(uuid: string): Promise<typePersonOverviewState> {
     let response = await fetch(`/FamilyTree/user_person/${uuid}`);
-    if (response.ok) {
-        let result = await response.json();
-        let person = await parsePersonResults<typePersonAll>(result.person);
-        return {person: person, owner: result.owner} as typePersonOverviewState;
-    }
-    throw new Error(response.statusText);
+    if (!response.ok) throw new Error(response.statusText);
+    let result = await response.json();
+    let person = await parsePersonResults<typePersonAll>(result.person);
+    return {person: person, owner: result.owner} as typePersonOverviewState;
 }
 
 /**

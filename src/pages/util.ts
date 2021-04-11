@@ -2,13 +2,13 @@
 export type typeHashmap<T> = { [key: string]: T };
 
 /**
- * Transform array into hashmap getting the key from the key function
+ * Transform array into hashmap getting the toKey from the toKey function
  * @param list
- * @param key function that returns key of this item
+ * @param toKey function that returns toKey of this item
  */
-export function toHashMap<T>(list: T[], key: (t: T) => string): typeHashmap<T> {
+export function toHashMap<T>(list: T[], toKey: (t: T) => string): typeHashmap<T> {
     return list.reduce((map: typeHashmap<T>, obj: T) => {
-        map[key(obj)] = obj;
+        map[toKey(obj)] = obj;
         return map;
     }, {})
 }
