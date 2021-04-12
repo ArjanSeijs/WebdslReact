@@ -6,12 +6,12 @@ import {typePerson, typePersonBase} from "./personOverview";
 import {FetchError, rejected} from "./authencation";
 
 
-type searchState = { people: typePersonBase[], trees: { uuid: string, name: string }[] };
-type searchProps = { query: string };
+export type typeSearchState = { people: typePersonBase[], trees: { uuid: string, name: string }[] };
+export type typeSearchProps = { query: string } ;
 
-export class Search extends React.Component<searchProps, searchState> {
+export class Search extends React.Component<typeSearchProps, typeSearchState> {
 
-    constructor(props: searchProps) {
+    constructor(props: typeSearchProps) {
         super(props);
         this.state = {trees: [], people: []};
     }
@@ -29,7 +29,7 @@ export class Search extends React.Component<searchProps, searchState> {
         this.setState({people: people, trees: results.trees})
     }
 
-    componentDidUpdate(prevProps: Readonly<searchProps>, prevState: Readonly<searchState>, snapshot?: any) {
+    componentDidUpdate(prevProps: Readonly<typeSearchProps>, prevState: Readonly<typeSearchState>, snapshot?: any) {
         if (prevProps.query !== this.props.query) {
             this.fetchSearch().catch(rejected);
         }

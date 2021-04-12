@@ -4,6 +4,7 @@ import {Button, Card, Col, Container, Form, ListGroup, ListGroupItem, Row} from 
 import ReactMarkdown from "react-markdown";
 import {FetchError, rejected} from "./authencation";
 import {formatDate, toHashMap} from "./util";
+import {typeHistoryProps} from "../App";
 
 /** Use for an <option value={value}>{name}</option> in a select input*/
 type typeSelectValue = { value: string, displayValue: string };
@@ -20,11 +21,13 @@ type typeEditableInputProps = typeEditableBaseProps<HTMLInputElement>
 type typePersonCardEditableState =
     typePersonOverviewState
     & { validParents: typePersonBase[], editablePerson: typePersonAll }
+/** Props for {@see PersonEdit}*/
+export type typePersonCardEditProps = typePersonOverviewProps & typeHistoryProps;
 
 /**
  * Component that holds the data for
  */
-export class PersonEdit extends React.Component<typePersonOverviewProps, typePersonCardEditableState> {
+export class PersonEdit extends React.Component<typePersonCardEditProps, typePersonCardEditableState> {
 
 
     componentDidMount() {
@@ -125,17 +128,18 @@ export class PersonEdit extends React.Component<typePersonOverviewProps, typePer
         if (!this.state) return;
         this.editPerson().then(() => {
             alert('Saved');
-            window.location.pathname = `/person_overview/${this.props.uuid}`;
+            this.props.history.push(`/person_overview/${this.props.uuid}`)
         }).catch(rejected);
     }
 
     delete() {
         if (!this.state) return;
-        let confirmed = window.confirm('Are you sure you want to remove ' + this.state.person.fullname);
+        let fullname = this.state.person.fullname;
+        let confirmed = window.confirm('Are you sure you want to remove ' + fullname);
         if(!confirmed) return;
         this.deletePerson().then(() => {
-            alert('Remove');
-            window.location.pathname = `/family_overview/${this.state.family.uuid}`;
+            alert(`Person ${fullname} deleted`);
+            this.props.history.push(`/family_overview/${this.state.family.uuid}`);
         }).catch(rejected);
     }
 
@@ -147,7 +151,7 @@ export class PersonEdit extends React.Component<typePersonOverviewProps, typePer
             headers: {'Content-Type': 'application/json'},
         })
         if (!response.ok) throw new FetchError(response.statusText, url);
-        window.location.pathname = `/family_overview/${this.state.family.uuid}`
+        this.props.history.push(`/family_overview/${this.state.family.uuid}`)
     }
 
     /**

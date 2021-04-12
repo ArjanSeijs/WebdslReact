@@ -1,6 +1,7 @@
 import React from "react";
 import {Button, Card, Form, FormControl, InputGroup} from "react-bootstrap";
 import {makeAutoObservable} from "mobx";
+import {typeHistory, typeHistoryProps} from "../App";
 
 type authProps = { title: string };
 type authState = { username: string, password: string }
@@ -29,11 +30,13 @@ export class AuthenticationState {
     /**
      * Update the state, does not handle the actual logout server
      * @param redirect - if true return to home page.
+     * @param history?
      */
-    logout(redirect = false) {
+    logout(redirect = false, history?: typeHistory) {
         this.username = '';
         if (redirect && window.location.pathname !== '/' && window.location.pathname) {
-            window.location.pathname = '/'
+            if (history) history.push('/')
+            else window.location.pathname = '/'
         }
     }
 
@@ -148,7 +151,7 @@ export class RegisterComponent extends AuthComponent {
 /**
  * Logout component
  */
-export class LogoutComponent extends React.Component {
+export class LogoutComponent extends React.Component<typeHistoryProps> {
 
     render(): JSX.Element {
         return <li className="nav-item nav-link" onClick={(e) => (this.handleSubmit())}>
@@ -157,7 +160,7 @@ export class LogoutComponent extends React.Component {
     }
 
     handleSubmit(): void {
-        logout().then(() => AuthenticationState.instance.logout(true)).catch(rejected);
+        logout().then(() => AuthenticationState.instance.logout(true, this.props.history)).catch(rejected);
     }
 
 }

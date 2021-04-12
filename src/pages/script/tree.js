@@ -8,10 +8,12 @@
  * ++ Adjustments partly taken from
  * ++ SOURCE https://github.com/justincy/d3-pedigree-examples Copyright (c) 2015 Justin York
  * ++ MIT LICENSE https://github.com/justincy/d3-pedigree-examples/blob/gh-pages/LICENSE
- * 
+ *
  * ++ Edited by Arjan Seijs
  */
-$(() => {
+import {d3} from "d3-node"
+
+export function makeTree(input, history) {
 	const width = Math.floor(0.9 * window.innerWidth) //document.getElementById("tree").clientWidth;//window.innerWidth;
 	const height = Math.floor(0.9 * window.innerHeight)//document.getElementById("tree").clientHeight;//window.innerHeight;
 	const duration = 350;
@@ -22,7 +24,7 @@ $(() => {
 	let data = {
 		name: 'Top Level',
 	};
-	
+
 	let descendantRoot;
 	let ancestorRoot;
 	let i = 0;
@@ -86,7 +88,7 @@ $(() => {
 		// <<<<<<<<<
 		// data = jsyaml.load(dataStr)
 		// ===========
-		data = getData();
+		data = input.json
 		// >>>>>>>>>>>>
 
 
@@ -99,7 +101,7 @@ $(() => {
 		if(descendantRoot.children) {
 			descendantRoot.children.forEach(collapse);
 		}
-		
+
 		// <++++
 		// Assigns parent, children, height, depth
 		ancestorRoot = d3.hierarchy(rootProxy(data), d => d.parents);
@@ -163,9 +165,9 @@ $(() => {
 		// ++++ >
 	}
 
-	// 
+	//
 	//https://stackoverflow.com/questions/24784302/wrapping-text-in-d3
-	// 
+	//
 	function wrap(text, width) {
 		const pxToEm = 0.0833; // em to px ratio for size = 12px
 	    text.each(function () {
@@ -199,7 +201,7 @@ $(() => {
 	        }
 	    });
 	}
-	
+
 	function update(source, direction, type) {
 		// Assigns the x and y position for the nodes
 		const treeData = type === 'descendant' ? treeDescendants(descendantRoot) : treeAncestors(ancestorRoot); // ++++
@@ -234,7 +236,7 @@ $(() => {
 		const personBlock = nodeEnter.append('g').attr('transform', d => {
 			return (d.data.spouse && d.data.spouse.length > 0? `translate(0, ${-spouseSpace / 2})` : 'translate(0, 0)') + ` scale(${direction}, 1)`; // ++++
 		})
-		
+
 		// Add Rectangle as text box for the nodes
 		let p = personBlock
 			.append('rect')
@@ -287,7 +289,7 @@ $(() => {
 			.attr('y2', spouseSpace / 2);
 		// Add spouse block
 		const spouseBlock = nodeHasSpouse.append('g').attr('transform', `translate(0, ${spouseSpace / 2}) scale(${direction}, 1)`); // ++++
-		
+
 		spouseBlock.each(function (d, i) {
 			for (let j = 0; j < d.data.spouse.length; j++) {
 				d3.select(this).append('rect')
@@ -469,23 +471,22 @@ $(() => {
 		update(d, direction, type); // +++++
 	}
 
-	function dblclick(d) {
-		if(d.data.uuid) {
-			window.location.href = "/person_tree/"+d.data.uuid;
-		}
-	}
-	
 	function personUrl(uuid) {
 		if(uuid) {
-			return "/person_tree/" + uuid;
+			return "/person_overview/" + uuid;
 		}
 	}
 	// < ++++
 	parseData()
 	// ++++ >
-});
 
-
-function getData() {
-	return familyJson.data;
+	document.querySelectorAll('#tree *> a').forEach(value => {
+		value.addEventListener("click", (e) => {
+			e.preventDefault()
+			let href = value.href.baseVal;
+			if (href) {
+                history.push(href)
+            }
+		}, {once : true});
+	})
 }

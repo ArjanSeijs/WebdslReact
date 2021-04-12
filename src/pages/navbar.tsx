@@ -3,6 +3,7 @@ import {Link} from "react-router-dom";
 import {Button, Form, Nav, Navbar, NavDropdown} from "react-bootstrap";
 import {AuthenticationState, FetchError, LoginComponent, LogoutComponent, RegisterComponent, rejected} from "./authencation";
 import {observer} from "mobx-react";
+import {typeHistoryProps} from "../App";
 
 /** {@see TreeList}*/
 type typeTreeListState = { trees: { name: string, uuid: string }[] }
@@ -15,12 +16,11 @@ type typeSearchBarState = { search: string };
  * Navbar with authenthication models that changes depending on {@link AuthenticationState}
  */
 @observer
-export class MyNavbar extends React.Component {
+export class MyNavbar extends React.Component<typeHistoryProps> {
 
     render() {
-        let auth: JSX.Element;
         let loggedIn = AuthenticationState.instance.isLoggedIn();
-        auth = MyNavbar.auth(loggedIn);
+        let auth: JSX.Element = this.auth(loggedIn);
         return (
             <Navbar variant='dark' bg="dark" expand="lg">
                 <Navbar.Brand href="/">Family Tree</Navbar.Brand>
@@ -28,7 +28,7 @@ export class MyNavbar extends React.Component {
                 <Navbar.Collapse id="basic-navbar-nav">
                     <Nav className="mr-auto mb-2 mb-lg-0">
                         <NavbarLink to="/" text="Home"/>
-                        {loggedIn ? <TreeList/> : ''}
+                        {loggedIn ? <TreeList history={this.props.history}/> : ''}
                     </Nav>
                     <Nav className="ml-auto">
                         {auth}
@@ -39,11 +39,11 @@ export class MyNavbar extends React.Component {
         )
     }
 
-    private static auth(loggedIn: boolean) {
+    private auth(loggedIn: boolean) {
         if (loggedIn) {
             return <>
                 <li className="nav-item nav-link"><i className="fa fa-user-lock"/> {AuthenticationState.instance.username} </li>
-                <LogoutComponent/>
+                <LogoutComponent history={this.props.history}/>
             </>
         }
         return <>
@@ -100,9 +100,9 @@ class SearchBar extends React.Component<{}, typeSearchBarState> {
 /**
  * List with all user trees and creation of new family trees.
  */
-class TreeList extends React.Component<{}, typeTreeListState> {
+class TreeList extends React.Component<typeHistoryProps, typeTreeListState> {
 
-    constructor(props: {}) {
+    constructor(props: typeHistoryProps) {
         super(props);
         this.state = {trees: []};
     }
@@ -118,16 +118,16 @@ class TreeList extends React.Component<{}, typeTreeListState> {
     render() {
         return (
             <NavDropdown id='tree-list' title='Family Trees'>
-                {this.state.trees.map(state => <NavDropdown.Item key={state.uuid} href={`/family_overview/${state.uuid}`}>{state.name}</NavDropdown.Item>)}
+                {this.state.trees.map(state => <Link className="dropdown-item" key={state.uuid}  to={`/family_overview/${state.uuid}`}>{state.name}</Link>)}
                 <NavDropdown.Divider/>
-                <NavDropdown.Item onClick={() => TreeList.createTree()}>+ Family Tree</NavDropdown.Item>
+                <NavDropdown.Item onClick={this.createTree.bind(this)}>+ Family Tree</NavDropdown.Item>
             </NavDropdown>)
     }
 
-    private static createTree() {
+    private createTree() {
         let name = prompt("Family Name: ", "My Family");
         if (name) {
-            TreeList.newTree(name).catch(rejected);
+            this.newTree(name).catch(rejected);
         }
     }
 
@@ -136,7 +136,7 @@ class TreeList extends React.Component<{}, typeTreeListState> {
      * @param name
      * @private
      */
-    private static async newTree(name: string) {
+    private async newTree(name: string) {
         let url = '/FamilyTree/user_newFamily';
         let response = await fetch(url, {
             method: 'POST',
@@ -145,6 +145,7 @@ class TreeList extends React.Component<{}, typeTreeListState> {
         })
         if (!response.ok) throw new FetchError(response.statusText, url);
         let {uuid} = await response.json();
-        window.location.pathname = `/family_overview/${uuid}`;
+
+        this.props.history.push(`/family_overview/${uuid}`);
     }
 }

@@ -6,6 +6,7 @@ import {typePersonBase, PersonCard, typePerson, parsePersonResults} from "./pers
 import {AuthenticationState, FetchError, rejected} from "./authencation";
 import {observer} from "mobx-react";
 import {toHashMap} from "./util";
+import {typeHistoryProps} from "../App";
 
 /** Represents min and max values of the birthday and passingdate filters and step value*/
 type typeDateFilter = { min: number, minValue: number, max: number, maxValue: number, stepValue: number };
@@ -24,17 +25,17 @@ type typeFilterState = {
 type typeFamilyState = { people: typePerson[], name: string, owner: string };
 
 /** {@see FamilyOverview}*/
-type familyOverviewState = typeFamilyState & typeFilterState;
+export type typeFamilyOverviewState = typeFamilyState & typeFilterState;
 /** {@see FamilyOverview}*/
-type familyOverviewType = { uuid: string };
+export type typeFamilyOverviewProps = { uuid: string } & typeHistoryProps;
 
 /**
  * Component that displays all people in this tree and options for filtering & sorting them
  */
 @observer
-export class FamilyOverview extends React.Component<familyOverviewType, familyOverviewState> {
+export class FamilyOverview extends React.Component<typeFamilyOverviewProps, typeFamilyOverviewState> {
 
-    constructor(props: familyOverviewType) {
+    constructor(props: typeFamilyOverviewProps) {
         super(props);
         let sortFunc = this.sortName.bind(this);
 
@@ -127,12 +128,17 @@ export class FamilyOverview extends React.Component<familyOverviewType, familyOv
             birthday: {min: birthdayMinValue, max: birthdayMaxValue, minValue: birthdayMinValue, maxValue: birthdayMaxValue, stepValue: bdayScale},
             passingdate: {min: passingdateMinValue, max: passingdateMaxValue, minValue: passingdateMinValue, maxValue: passingdateMaxValue, stepValue: pdayScale}
         }
-        console.log(dates)
         this.setState({dates})
     }
 
     componentDidMount() {
         this.update();
+    }
+
+    componentDidUpdate(prevProps: Readonly<typeFamilyOverviewProps>, prevState: Readonly<typeFamilyOverviewState>, snapshot?: any) {
+        if(prevProps.uuid !== this.props.uuid) {
+            this.update();
+        }
     }
 
     private update() {
@@ -296,7 +302,7 @@ export class FamilyOverview extends React.Component<familyOverviewType, familyOv
         if (!response.ok) throw new FetchError( response.statusText, url);
         let json = await response.json();
         let uuid = json.uuid;
-        window.location.pathname = `/person_edit/${uuid}`
+        this.props.history.push(`/person_edit/${uuid}`)
     }
 
 

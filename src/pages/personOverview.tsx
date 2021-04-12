@@ -25,11 +25,11 @@ export type typePersonAll = typePerson & typePersonOptionalData;
 /** Props & State for the components */
 export type typePersonCardProps = { link?: string, faIcon: string, pre?: string, value: string | number | undefined, placeholder?: string };
 /** Props for {@see PersonOverview}*/
-export type typePersonOverviewProps = { uuid: string};
+export type typePersonOverviewProps = { uuid: string };
 /** Family meta data*/
-export type typeFamily = {owner : string, canEdit : string, uuid : string, name : string}
+export type typeFamily = { owner: string, canEdit: string, uuid: string, name: string }
 /** State for {@see PersonOverview}*/
-export type typePersonOverviewState = { person: typePersonAll, family : typeFamily};
+export type typePersonOverviewState = { person: typePersonAll, family: typeFamily };
 
 /**
  * A page of a person displaying all information
@@ -62,7 +62,12 @@ export class PersonOverview extends React.Component<typePersonOverviewProps, typ
                         <PersonCardListExtended person={p}/>
                     </Col>
                     <Col md={8}>
-                        <h1>{p.fullname} {!editable ? null : <sup><Link to={`/person_edit/${this.props.uuid}`}><i className="fas fa-pencil-alt"/></Link></sup>}</h1>
+                        <h1 className="card-title">{p.fullname}</h1>
+                        <h6 className="card-subtitle mb-2 text-muted">
+                            {!editable ? null : <Link to={`/person_edit/${this.props.uuid}`}>Edit <i className="fas fa-pencil-alt"/></Link>} &nbsp;
+                            <Link to={`/family_overview/${this.state.family.uuid}`}>Back to family <i className="fas fa-user-friends"/></Link> &nbsp;
+                            <Link to={`/person_tree/${this.props.uuid}`}>View family tree <i className="fas fa-tree"/></Link>
+                        </h6>
                         <hr/>
                         <ReactMarkdown>{p.description || ''}</ReactMarkdown>
                     </Col>
@@ -167,7 +172,7 @@ export async function fetchPerson(uuid: string): Promise<typePersonOverviewState
     if (!response.ok) throw new FetchError(response.statusText, url);
     let result = await response.json();
     let person = await parsePersonResults<typePersonAll>(result.person);
-    return {person: person, family : result.family} as typePersonOverviewState;
+    return {person: person, family: result.family} as typePersonOverviewState;
 }
 
 /**
