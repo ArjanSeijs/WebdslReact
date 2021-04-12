@@ -1,7 +1,7 @@
 import React from "react";
 import {Link} from "react-router-dom";
 import {Button, Form, Nav, Navbar, NavDropdown} from "react-bootstrap";
-import {AuthenticationState, LoginComponent, LogoutComponent, RegisterComponent, rejected} from "./authencation";
+import {AuthenticationState, FetchError, LoginComponent, LogoutComponent, RegisterComponent, rejected} from "./authencation";
 import {observer} from "mobx-react";
 
 /** {@see TreeList}*/
@@ -137,12 +137,13 @@ class TreeList extends React.Component<{}, typeTreeListState> {
      * @private
      */
     private static async newTree(name: string) {
-        let response = await fetch('/FamilyTree/user_newFamily', {
+        let url = '/FamilyTree/user_newFamily';
+        let response = await fetch(url, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: name
         })
-        if (!response.ok) throw new Error(response.statusText);
+        if (!response.ok) throw new FetchError(response.statusText, url);
         let {uuid} = await response.json();
         window.location.pathname = `/family_overview/${uuid}`;
     }

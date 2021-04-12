@@ -3,7 +3,7 @@ import '../stylesheets/style.css'
 import React from "react";
 import {Button, Container, DropdownButton, Form, InputGroup, Row} from "react-bootstrap";
 import {typePersonBase, PersonCard, typePerson, parsePersonResults} from "./personOverview";
-import {AuthenticationState, rejected} from "./authencation";
+import {AuthenticationState, FetchError, rejected} from "./authencation";
 import {observer} from "mobx-react";
 import {toHashMap} from "./util";
 
@@ -146,12 +146,13 @@ export class FamilyOverview extends React.Component<familyOverviewType, familyOv
     private async editName() {
         let newName = prompt('Edit name', this.state.name)
         if (newName && newName !== this.state.name) {
-            let response = await fetch(`/FamilyTree/user_setFamilyName/${this.props.uuid}`, {
+            let url = `/FamilyTree/user_setFamilyName/${this.props.uuid}`;
+            let response = await fetch(url, {
                 method: 'PUT',
                 headers: {'Content-Type': 'application/json'},
                 body: newName
             })
-            if (!response.ok) throw new Error(response.statusText);
+            if (!response.ok) throw new FetchError(response.statusText, url);
             this.setState({name: newName})
         }
     }
@@ -290,8 +291,9 @@ export class FamilyOverview extends React.Component<familyOverviewType, familyOv
      * @private
      */
     private async newPerson() {
-        let response = await fetch(`/FamilyTree/user_newPerson/${this.props.uuid}`, {method: 'POST'});
-        if (!response.ok) throw new Error(response.statusText);
+        let url = `/FamilyTree/user_newPerson/${this.props.uuid}`;
+        let response = await fetch(url, {method: 'POST'});
+        if (!response.ok) throw new FetchError( response.statusText, url);
         let json = await response.json();
         let uuid = json.uuid;
         window.location.pathname = `/person_edit/${uuid}`

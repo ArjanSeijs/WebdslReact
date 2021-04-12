@@ -3,7 +3,7 @@ import {Card, Container, Row} from "react-bootstrap";
 import {Link} from "react-router-dom";
 import {parsePeopleResults} from "./familyOverview";
 import {typePerson, typePersonBase} from "./personOverview";
-import {rejected} from "./authencation";
+import {FetchError, rejected} from "./authencation";
 
 
 type searchState = { people: typePersonBase[], trees: { uuid: string, name: string }[] };
@@ -21,8 +21,9 @@ export class Search extends React.Component<searchProps, searchState> {
     }
 
     private async fetchSearch() {
-        let response = await fetch(`/FamilyTree/sv_search/${encodeURI(this.props.query)}`);
-        if (!response.ok) throw new Error(response.statusText);
+        let url = `/FamilyTree/sv_search/${encodeURI(this.props.query)}`;
+        let response = await fetch(url);
+        if (!response.ok) throw new FetchError(response.statusText, url);
         let results = await response.json();
         let people = await parsePeopleResults<typePerson>(results);
         this.setState({people: people, trees: results.trees})

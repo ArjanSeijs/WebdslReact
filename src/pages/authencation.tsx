@@ -50,8 +50,9 @@ export class AuthenticationState {
      * valid.
      */
     async update() {
-        let response = await fetch('/FamilyTree/user_name')
-        if (!response.ok) throw new Error(response.statusText)
+        let url = '/FamilyTree/user_name';
+        let response = await fetch(url)
+        if (!response.ok) throw new FetchError(response.statusText, url)
 
         let json = await response.json();
         if (json.status === 'loggedin') {
@@ -168,14 +169,15 @@ export class LogoutComponent extends React.Component {
  * @param password
  */
 async function register(username: string, password: string): Promise<string> {
-    let response = await fetch('/FamilyTree/user_register', {
+    let url = '/FamilyTree/user_register';
+    let response = await fetch(url, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json;charset=utf-8'
         },
         body: JSON.stringify({username, password})
     })
-    if (!response.ok) throw new Error(response.statusText)
+    if (!response.ok) throw new FetchError(response.statusText, url)
     let json = await response.json();
     alert(json.message)
     return username;
@@ -190,7 +192,8 @@ async function register(username: string, password: string): Promise<string> {
  * @return the username of if succeeded.
  */
 async function login(username: string, password: string): Promise<string> {
-    let response = await fetch('/FamilyTree/user_login', {
+    let url = '/FamilyTree/user_login';
+    let response = await fetch(url, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json;charset=utf-8'
@@ -198,10 +201,10 @@ async function login(username: string, password: string): Promise<string> {
         body: JSON.stringify({username, password})
     })
 
-    if (!response.ok) throw new Error(response.statusText)
+    if (!response.ok) throw new FetchError(response.statusText, url)
 
     let json = await response.json();
-    if (json.status !== 'success') throw new Error(json.message);
+    if (json.status !== 'success') throw new FetchError(json.message, url);
     alert(json.message)
     return json.username;
 }
@@ -211,11 +214,12 @@ async function login(username: string, password: string): Promise<string> {
  * @throws Error if request failed
  */
 async function logout(): Promise<void> {
-    let response = await fetch('/FamilyTree/user_logout', {redirect: "manual"})
-    if (!response.ok) throw new Error(response.statusText)
+    let url = '/FamilyTree/user_logout';
+    let response = await fetch(url, {redirect: "manual"})
+    if (!response.ok) throw new FetchError(response.statusText, url)
 
     let json = await response.json();
-    if (json.status !== 'success') throw new Error(json.message);
+    if (json.status !== 'success') throw new FetchError(json.message, url);
     alert('Logged out!')
 }
 
@@ -225,15 +229,24 @@ async function logout(): Promise<void> {
  * @param e
  */
 export function rejected(e: Error) {
-    console.warn(e.name)
-    console.warn(e.message)
+    if (e instanceof FetchError) {
+        console.error('Exception at ' + e.source)
+    }
     console.error(e)
     if (e.message === "NetworkError when attempting to fetch resource.") {
         alert('Access denied, invalid permissions')
-        window.location.pathname = '/'
     } else if (e.message === "Internal Server Error") {
         alert('Could not reach server')
     } else {
         alert(e.message);
+    }
+}
+
+export class FetchError extends Error {
+    source: string;
+
+    constructor(message: string, source: string) {
+        super(message);
+        this.source = source;
     }
 }

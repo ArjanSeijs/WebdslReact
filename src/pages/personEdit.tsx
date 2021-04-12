@@ -2,7 +2,7 @@ import React, {ChangeEvent} from "react";
 import {fetchPerson, typePersonAll, typePersonBase, typePersonOverviewProps, typePersonOverviewState, typePersonId} from "./personOverview";
 import {Button, Card, Col, Container, Form, ListGroup, ListGroupItem, Row} from "react-bootstrap";
 import ReactMarkdown from "react-markdown";
-import {rejected} from "./authencation";
+import {FetchError, rejected} from "./authencation";
 import {formatDate, toHashMap} from "./util";
 
 /** Use for an <option value={value}>{name}</option> in a select input*/
@@ -19,7 +19,7 @@ type typeEditableInputProps = typeEditableBaseProps<HTMLInputElement>
 /** State for {@see PersonEdit}*/
 type typePersonCardEditableState =
     typePersonOverviewState
-    & { validParents: typePersonBase[], editablePerson: typePersonAll}
+    & { validParents: typePersonBase[], editablePerson: typePersonAll }
 
 /**
  * Component that holds the data for
@@ -35,9 +35,9 @@ export class PersonEdit extends React.Component<typePersonOverviewProps, typePer
      * Fetch both the person and allowed parents, and update state accordingly
      */
     async fetch() {
-        let [{owner, person}, {validParents}] = await Promise.all([fetchPerson(this.props.uuid), this.fetchValidParents()]);
+        let [{family, person}, {validParents}] = await Promise.all([fetchPerson(this.props.uuid), this.fetchValidParents()]);
         this.setState({
-            owner: owner,
+            family: family,
             person: person,
             editablePerson: {...person},
             validParents: validParents,
@@ -48,8 +48,9 @@ export class PersonEdit extends React.Component<typePersonOverviewProps, typePer
      * Get a list in form {uuid : string, name : string}[] with all family members that are allowed to be a parent of this person
      */
     async fetchValidParents(): Promise<{ validParents: typePersonBase[] }> {
-        let response = await fetch(`/FamilyTree/user_validParents/${this.props.uuid}`)
-        if (!response.ok) throw new Error(response.statusText);
+        let url = `/FamilyTree/user_validParents/${this.props.uuid}`;
+        let response = await fetch(url)
+        if (!response.ok) throw new FetchError(response.statusText, url);
         let json = await response.json();
         let parents: typePersonBase[] = json.parents;
         return {validParents: parents};
@@ -68,15 +69,15 @@ export class PersonEdit extends React.Component<typePersonOverviewProps, typePer
                             {this.renderList()}
                         </Col>
                         <Col md={8}>
-                            <h1>{p.fullname} <Button onClick={this.save.bind(this)}>Save</Button></h1>
+                            <h1>{p.fullname} </h1>
                             <hr/>
                             <textarea className={'w-100 h-50'} defaultValue={p.description || ''} onChange={(e) => this.updateDesc(e)}/>
                             <hr/>
                             <ReactMarkdown>{(p.description || '')}
                             </ReactMarkdown>
+                            <Button onClick={this.save.bind(this)}>Save</Button><Button variant="danger" onClick={this.delete.bind(this)}>delete</Button>
                         </Col>
                     </Row>
-
                 </Card>
             </Form>
         </Container>
@@ -121,10 +122,32 @@ export class PersonEdit extends React.Component<typePersonOverviewProps, typePer
      * @see editPerson
      */
     save() {
+        if (!this.state) return;
         this.editPerson().then(() => {
             alert('Saved');
             window.location.pathname = `/person_overview/${this.props.uuid}`;
         }).catch(rejected);
+    }
+
+    delete() {
+        if (!this.state) return;
+        let confirmed = window.confirm('Are you sure you want to remove ' + this.state.person.fullname);
+        if(!confirmed) return;
+        this.deletePerson().then(() => {
+            alert('Remove');
+            window.location.pathname = `/family_overview/${this.state.family.uuid}`;
+        }).catch(rejected);
+    }
+
+
+    async deletePerson() {
+        let url = `/FamilyTree/user_deletePerson/${this.props.uuid}`;
+        let response = await fetch(url, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+        })
+        if (!response.ok) throw new FetchError(response.statusText, url);
+        window.location.pathname = `/family_overview/${this.state.family.uuid}`
     }
 
     /**
@@ -140,15 +163,16 @@ export class PersonEdit extends React.Component<typePersonOverviewProps, typePer
             // If p.uuid is empty then a parent was removed.
             parents: editablePerson.parents.filter(p => !!p.uuid)
         }
-        let response = await fetch(`/FamilyTree/user_editPerson/${this.props.uuid}`, {
+        let url = `/FamilyTree/user_editPerson/${this.props.uuid}`;
+        let response = await fetch(url, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify(jsonBody)
         })
-        if (!response.ok) throw new Error(response.statusText);
+        if (!response.ok) throw new FetchError(response.statusText, url);
 
         let json = await response.json();
-        if (json.status !== "success") throw new Error(json.message);
+        if (json.status !== "success") throw new FetchError(json.message, url);
         await this.fetch();
     }
 
@@ -208,8 +232,8 @@ export class PersonEdit extends React.Component<typePersonOverviewProps, typePer
             let parents: typePersonId[] = [];
 
             // Update the values,
-            parents.push(number === 0 ? {uuid, name, fullname} : (prev.editablePerson.parents[0] || {name: '', uuid: '', fullname : ''}))
-            parents.push(number === 1 ? {uuid, name, fullname} : (prev.editablePerson.parents[1] || {name: '', uuid: '', fullname : ''}))
+            parents.push(number === 0 ? {uuid, name, fullname} : (prev.editablePerson.parents[0] || {name: '', uuid: '', fullname: ''}))
+            parents.push(number === 1 ? {uuid, name, fullname} : (prev.editablePerson.parents[1] || {name: '', uuid: '', fullname: ''}))
             return {editablePerson: {...prev.editablePerson, parents: parents}};
         })
     }

@@ -3,7 +3,7 @@ import {Card, Col, Container, ListGroup, ListGroupItem, Row} from "react-bootstr
 import ReactMarkdown from "react-markdown";
 import {Link} from "react-router-dom";
 import {observer} from "mobx-react";
-import {AuthenticationState, rejected} from "./authencation";
+import {AuthenticationState, FetchError, rejected} from "./authencation";
 import {age} from "./util";
 
 
@@ -25,9 +25,11 @@ export type typePersonAll = typePerson & typePersonOptionalData;
 /** Props & State for the components */
 export type typePersonCardProps = { link?: string, faIcon: string, pre?: string, value: string | number | undefined, placeholder?: string };
 /** Props for {@see PersonOverview}*/
-export type typePersonOverviewProps = { uuid: string };
+export type typePersonOverviewProps = { uuid: string};
+/** Family meta data*/
+export type typeFamily = {owner : string, canEdit : string, uuid : string, name : string}
 /** State for {@see PersonOverview}*/
-export type typePersonOverviewState = { person: typePersonAll, owner: string, canEdit: boolean };
+export type typePersonOverviewState = { person: typePersonAll, family : typeFamily};
 
 /**
  * A page of a person displaying all information
@@ -49,7 +51,7 @@ export class PersonOverview extends React.Component<typePersonOverviewProps, typ
 
     render() {
         if (!this.state) return <Container><Card>Loading.. </Card></Container>
-        let editable = (this.state.owner === AuthenticationState.instance.username || this.state.canEdit) && AuthenticationState.instance.isLoggedIn();
+        let editable = (this.state.family.owner === AuthenticationState.instance.username || this.state.family.canEdit) && AuthenticationState.instance.isLoggedIn();
         let p = this.state.person;
 
         return <Container className={"p-3 h-auto"}>
@@ -60,7 +62,7 @@ export class PersonOverview extends React.Component<typePersonOverviewProps, typ
                         <PersonCardListExtended person={p}/>
                     </Col>
                     <Col md={8}>
-                        <h1>{p.fullname}{!editable ? null : <Link to={`/person_edit/${this.props.uuid}`}><i className="fas fa-pen-square"/></Link>}</h1>
+                        <h1>{p.fullname} {!editable ? null : <sup><Link to={`/person_edit/${this.props.uuid}`}><i className="fas fa-pencil-alt"/></Link></sup>}</h1>
                         <hr/>
                         <ReactMarkdown>{p.description || ''}</ReactMarkdown>
                     </Col>
@@ -160,11 +162,12 @@ class PersonCardItem extends React.Component<typePersonCardProps> {
  * @param all
  */
 export async function fetchPerson(uuid: string): Promise<typePersonOverviewState> {
-    let response = await fetch(`/FamilyTree/user_person/${uuid}`);
-    if (!response.ok) throw new Error(response.statusText);
+    let url = `/FamilyTree/user_person/${uuid}`;
+    let response = await fetch(url);
+    if (!response.ok) throw new FetchError(response.statusText, url);
     let result = await response.json();
     let person = await parsePersonResults<typePersonAll>(result.person);
-    return {person: person, owner: result.owner, canEdit : result.canEdit} as typePersonOverviewState;
+    return {person: person, family : result.family} as typePersonOverviewState;
 }
 
 /**
