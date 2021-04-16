@@ -283,7 +283,7 @@ class PersonEditFieldSelect extends PersonEditFieldBase<HTMLSelectElement, typeE
     getInput(): JSX.Element {
         let currentValue = this.props.currentValue as typeSelectValue | undefined;
         let allowedValues = this.props.allowedValues;
-        return <select className="m-0 w-100 form-select" aria-label="Default select example" defaultValue={currentValue?.value}
+        return <select className="m-0 w-100 form-select form-control" aria-label="Default select example" defaultValue={currentValue?.value}
                        onChange={(event => this.props.change(event))}>
             {allowedValues.map((option: typeSelectValue) => {
                 return <option key={option.value} value={option.value}>{option.displayValue}</option>

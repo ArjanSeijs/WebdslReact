@@ -185,6 +185,7 @@ export function makeTree(input, history) {
 	                        .attr("x", x)
 	                        .attr("y", y)
 	                        .attr("dy", dy + "em");
+			// eslint-disable-next-line
 	        while (word = words.pop()) {
 	            line.push(word);
 	            tspan.text(line.join(" "));
@@ -238,6 +239,7 @@ export function makeTree(input, history) {
 		})
 
 		// Add Rectangle as text box for the nodes
+		// eslint-disable-next-line
 		let p = personBlock
 			.append('rect')
 			.attr('x', d => (d.data.boxW ? -d.data.boxW / 2 : -boxW / 2))

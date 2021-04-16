@@ -118,7 +118,7 @@ class TreeList extends React.Component<typeHistoryProps, typeTreeListState> {
     render() {
         return (
             <NavDropdown id='tree-list' title='Family Trees'>
-                {this.state.trees.map(state => <Link className="dropdown-item" key={state.uuid}  to={`/family_overview/${state.uuid}`}>{state.name}</Link>)}
+                {this.state.trees.map(state => <Link className="dropdown-item" key={state.uuid} to={`/family_overview/${state.uuid}`}>{state.name}</Link>)}
                 <NavDropdown.Divider/>
                 <NavDropdown.Item onClick={this.createTree.bind(this)}>+ Family Tree</NavDropdown.Item>
             </NavDropdown>)
@@ -145,7 +145,9 @@ class TreeList extends React.Component<typeHistoryProps, typeTreeListState> {
         })
         if (!response.ok) throw new FetchError(response.statusText, url);
         let {uuid} = await response.json();
-
+        this.setState(prev => ({
+            trees: [...prev.trees, {name, uuid}]
+        }))
         this.props.history.push(`/family_overview/${uuid}`);
     }
 }
